@@ -1,7 +1,4 @@
 # Project specific files to exclude
-notes.md
-steps.md
-donesteps.md
 
 # Logs
 logs/

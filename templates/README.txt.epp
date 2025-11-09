@@ -1,0 +1,101 @@
+<%- | String $username,
+      String $quota,
+      Array[String] $subdirs,
+| -%>
+================================================================================
+                    STORAGE USER ACCOUNT INFORMATION
+================================================================================
+
+Username: <%= $username %>
+Disk Quota: <%= $quota %>
+Created: <%= strftime('%Y-%m-%d %H:%M:%S') %>
+
+--------------------------------------------------------------------------------
+DIRECTORY STRUCTURE
+--------------------------------------------------------------------------------
+
+Your home directory contains the following subdirectories:
+
+<% $subdirs.each |$subdir| { -%>
+  - <%= $subdir %>/
+<% } -%>
+
+Recommended usage:
+  - data/      : Store your primary files and documents here
+  - backups/   : Keep backup copies of important files
+  - temp/      : Temporary files (may be cleaned automatically)
+  - logs/      : Application or script logs
+
+--------------------------------------------------------------------------------
+QUOTA INFORMATION
+--------------------------------------------------------------------------------
+
+Your account has a disk quota of <%= $quota %>.
+
+To check your current disk usage:
+  $ quota -s
+
+If you exceed your quota:
+  - You will not be able to write new files
+  - Some applications may fail to save data
+  - Contact your administrator to request a quota increase
+
+--------------------------------------------------------------------------------
+IMPORTANT SECURITY NOTES
+--------------------------------------------------------------------------------
+
+1. Your home directory is private (mode 0700)
+   - Only you can access your files
+   - Even other users in your group cannot read your data
+
+2. First Login Password Change:
+   - You will be required to change your temporary password
+   - Choose a strong password (at least 12 characters)
+
+3. SSH Access:
+   - SSH access may be restricted for storage users
+   - Use SFTP, SCP, or file sharing protocols to access your files
+
+4. File Permissions:
+   - Be careful when changing file permissions
+   - Do not make files world-readable if they contain sensitive data
+
+--------------------------------------------------------------------------------
+GETTING STARTED
+--------------------------------------------------------------------------------
+
+To access your storage:
+
+Via SFTP (Recommended):
+  $ sftp <%= $username %>@<server-address>
+  > cd data
+  > put myfile.txt
+  > get remotefile.txt
+
+Via SCP:
+  # Upload
+  $ scp localfile.txt <%= $username %>@<server-address>:~/data/
+
+  # Download
+  $ scp <%= $username %>@<server-address>:~/data/remotefile.txt ./
+
+Via SSH (if enabled):
+  $ ssh <%= $username %>@<server-address>
+
+--------------------------------------------------------------------------------
+SUPPORT
+--------------------------------------------------------------------------------
+
+If you need assistance:
+  - Contact your system administrator
+  - Check logs in ~/logs/ for application errors
+  - Review quota usage if experiencing write failures
+
+For quota increases or other changes:
+  - Submit a request to your administrator
+  - Include justification for additional storage
+
+================================================================================
+Last Updated: <%= strftime('%Y-%m-%d') %>
+Managed by Puppet
+================================================================================
