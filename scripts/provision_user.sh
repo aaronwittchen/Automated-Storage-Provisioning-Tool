@@ -1,6 +1,5 @@
 #!/bin/bash
 # Enhanced user provisioning script
-# File: scripts/provision_user.sh
 
 set -euo pipefail
 
