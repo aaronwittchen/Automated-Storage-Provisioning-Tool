@@ -1,7 +1,3 @@
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'background': 'transparent' }}}%%
-```
-
 # Architecture: Automated Storage Provisioning Tool
 
 ## Overview
