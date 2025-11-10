@@ -1,3 +1,7 @@
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'background': 'transparent' }}}%%
+```
+
 # Architecture: Automated Storage Provisioning Tool
 
 ## Overview
@@ -26,7 +30,7 @@ graph TB
         Repo --> Tests
     end
     
-    Host -->|rsync/SCP| Deploy
+    Host -->|"rsync / SCP"| Deploy["Deploy"]
     
     subgraph VM["Rocky Linux VM"]
         direction TB
@@ -128,21 +132,21 @@ sequenceDiagram
 
     Admin->>Script: ./provision_user.sh alice -q 10G
     
-    rect rgb(255,255,255,0.1),stroke:#1e88e5,stroke-width:2px,dashed
+    rect stroke:#1e88e5,stroke-width:3px
     Note over Script: Validation Phase
     Script->>Script: Validate username format
     Script->>Script: Validate quota format
     Script->>System: Check if user exists
     end
     
-    rect rgb(255,255,255,0.1),stroke:#43a047,stroke-width:2px,dashed
+    rect stroke:#43a047,stroke-width:3px
     Note over Script: User Creation Phase
     Script->>System: useradd alice
     Script->>System: groupadd storage_users
     Script->>System: Generate temp password
     end
     
-    rect rgb(255,255,255,0.1),stroke:#ffc107,stroke-width:2px,dashed
+    rect stroke:#ffc107,stroke-width:3px
     Note over Script: Directory Setup Phase
     Script->>FS: mkdir /home/storage_users/alice
     Script->>FS: chown alice:storage_users
@@ -150,13 +154,13 @@ sequenceDiagram
     Script->>FS: Create subdirs (data,backups,temp,logs)
     end
     
-    rect rgb(255,255,255,0.1),stroke:#f44336,stroke-width:2px,dashed
+    rect stroke:#f44336,stroke-width:3px
     Note over Script: Quota Enforcement Phase
     Script->>System: xfs_quota set 10G limit
     Script->>System: xfs_quota verify
     end
     
-    rect rgb(255,255,255,0.1),stroke:#9c27b0,stroke-width:2px,dashed
+    rect stroke:#9c27b0,stroke-width:3px
     Note over Script: Access Control Phase
     Script->>System: SSH access: DENY
     Script->>System: Add SELinux context
@@ -166,8 +170,6 @@ sequenceDiagram
     Script->>Log: [INFO] User provisioned successfully
     Script->>Admin: Success + Temp Password
 ```
-
----
 
 ## Data Flow: Deprovisioning User
 
@@ -181,7 +183,7 @@ sequenceDiagram
 
     Admin->>Script: ./deprovision_user.sh alice --backup
     
-    rect rgb(255,255,255,0.1),stroke:#f44336,stroke-width:2px
+    rect stroke:#f44336,stroke-width:3px
     Note over Script: Safety Phase
     Script->>System: Verify user exists
     Script->>Admin: Display warning
@@ -190,15 +192,15 @@ sequenceDiagram
     Script->>System: Gather user info (UID, disk usage)
     end
     
-    rect rgb(255,255,255,0.1),stroke:#ff9800,stroke-width:2px
+    rect stroke:#ff9800,stroke-width:3px
     Note over Script: Backup Phase
-    Script->>FS: Read /home/storage_users/alice
+    Script->>System: Read /home/storage_users/alice
     Script->>Backup: tar -czf alice_TIMESTAMP.tar.gz
     Script->>Backup: Create alice_TIMESTAMP.tar.gz.meta
     Script->>Log: [INFO] Backup created
     end
     
-    rect rgb(255,255,255,0.1),stroke:#3f51b5,stroke-width:2px,dashed
+    rect stroke:#3f51b5,stroke-width:3px
     Note over Script: Account Termination Phase
     Script->>System: passwd -l alice (lock account)
     Script->>System: pkill -u alice (kill processes)
@@ -206,16 +208,16 @@ sequenceDiagram
     Script->>System: xfs_quota remove limits
     end
     
-    rect rgb(255,255,255,0.1),stroke:#e91e63,stroke-width:2px,dashed
+    rect stroke:#e91e63,stroke-width:3px
     Note over Script: Cleanup Phase
     Script->>System: userdel -r alice
-    Script->>FS: rm -rf /home/storage_users/alice
+    Script->>System: rm -rf /home/storage_users/alice
     Script->>System: Remove SSH config
     Script->>System: Remove audit rules
     end
     
     Script->>Log: [INFO] User deprovisioned
-    Script->>Admin: Deprovisioning complete<br/>Backup: /var/backups/.../alice_TIMESTAMP.tar.gz<br/>Restore command provided
+    Script->>Admin: Deprovisioning complete
 ```
 
 ---
@@ -369,19 +371,19 @@ graph TD
 
 ```mermaid
 graph LR
-    A["deprovision_user.sh alice"] --> B["⚠️ Warning Display"]
+    A["deprovision_user.sh alice"] --> B["Warning Display"]
     B --> C{Confirm?}
-    C -->|No| D["❌ Abort"]
+    C -->|No| D["Abort"]
     C -->|Yes| E["Create Backup"]
     E --> F["Lock Account"]
     F --> G["Kill Processes"]
     G --> H["Delete User"]
-    H --> I["Deprovisioned<br/>Backup saved: 30 days"]
+    H --> I["Deprovisioned"]
     
     style A stroke:#f44336,stroke-width:2px,fill:none
     style B stroke:#ffc107,stroke-width:2px,fill:none
     style I stroke:#43a047,stroke-width:2px,fill:none
-    style D stroke:#f44336,stroke-width:2px,fill:none
+    style D color:#d32f2f
 ```
 
 ---
@@ -511,142 +513,166 @@ If provisioning fails:
      - Retry with fixes
 ```
 
+---
+
 ## Terminology & Concepts
+
+> This section defines the key terms, technologies, and operational concepts used throughout the Automated Storage Provisioning Tool.
+
+---
 
 ### Core Technologies
 
-**XFS (X File System)**
-
-Modern, high-performance filesystem used by Rocky Linux. Supports project-based and user-based quotas natively. Handles large files and concurrent I/O efficiently. Industry standard for enterprise Linux systems. Preferred over ext4 for this project due to superior quota and scaling capabilities.
-
-**Puppet**
-
-Infrastructure-as-Code (IaC) automation tool that manages system configuration. Administrators declare desired system state in manifests (Ruby DSL files). Idempotent: applying the same manifest multiple times produces the same result, making it safe to re-run. Primary use in this project: ensuring consistent configuration across systems. Example: define that user "alice" should exist with specific permissions and quota.
-
-**Bash**
-
-Standard Linux shell scripting language used for direct provisioning operations and quick administrative tasks. Advantages: no external dependencies, runs on all Linux systems. In this project: handles immediate user creation, quota setting, and deprovisioning tasks. Complements Puppet for ad-hoc operations.
-
-**SSH (Secure Shell)**
-
-Remote access protocol providing encrypted communication (secure alternative to telnet). SFTP is SSH File Transfer Protocol for secure file transfers. SSH Keys provide cryptographic authentication (more secure than passwords). Chroot is a security feature that restricts users to specific directories.
-
-**Rocky Linux / RHEL**
-
-Rocky Linux is a free, community-maintained Linux distribution compatible with Red Hat Enterprise Linux (RHEL). RHEL is the industry standard for enterprise servers. Rocky provides stability, predictable updates, and long-term support with a large ecosystem of tools and documentation.
-
-**Sudo**
-
-Command allowing regular users to execute commands with root (administrator) privileges. Requires password confirmation. Essential for provisioning scripts that need elevated permissions without logging in as root directly. Provides audit trail of who ran what command.
-
-### Storage & Quota Concepts
-
-**Quota (Disk Quota)**
-
-Limit on how much disk space a user or group can consume. Soft limit is a warning threshold that users can temporarily exceed. Hard limit is absolute - users cannot exceed this limit under any circumstances. Quotas prevent single users from filling entire storage systems and ensure fair resource distribution.
-
-**Inode**
-
-Index node - filesystem structure storing file metadata (name, permissions, size, ownership, timestamps). Each file or directory consumes at least one inode. Systems have both disk space limits and inode limits. A user can hit inode limit (too many files) even with free disk space available.
-
-**Filesystem**
-
-Hierarchical structure organizing files and directories on disk. Examples: XFS, ext4, BTRFS. Each filesystem has different features (quotas, snapshots, compression). Mount point is the directory where filesystem is attached to the system (example: /storage mounted at /dev/sda1).
-
-**SELinux (Security-Enhanced Linux)**
-
-Mandatory access control system adding additional security layers beyond standard Unix permissions. Assigns security contexts to files and processes. Can enforce policies preventing certain operations even if Unix permissions allow them. Used in this project to restrict storage user directories.
-
-### User & Group Management
-
-**User Account**
-
-Individual login credential representing a person or service. Associated with UID (unique numeric identifier). Has home directory, shell, group membership, and security context. In this project: created per storage user with automatic home directory provisioning.
-
-**Group**
-
-Collection of users sharing common permissions and attributes. All storage users belong to "storage_users" group. Simplifies permission management - can assign permissions to entire groups instead of individuals. Associated with GID (unique numeric identifier).
-
-**Home Directory**
-
-Primary directory for user files and configuration. In this project: /home/storage_users/{username}/. User owns home directory with 700 permissions (drwx------) - only owner can access. Contains subdirectories: data/, backups/, temp/, logs/.
-
-**PAM (Pluggable Authentication Modules)**
-
-System for authenticating users on Linux. Handles password checking, account lockouts, session management. Can enforce policies like password expiration or login hour restrictions. Works with useradd/userdel commands to validate user creation.
-
-### Access Control & Security
-
-**Authentication**
-
-Verifying user identity. Methods used in this project: passwords (temporary, must change), SSH keys (cryptographic), Puppet authentication (certificate-based). Different from authorization (what user can do).
-
-**Authorization**
-
-Determining what actions authenticated user can perform. In this project: users can only access their own /home/storage_users/{username}/ directory. Admins can provision/deprovision users and modify quotas. System enforces quotas preventing disk exhaustion.
-
-**Chroot (Change Root)**
-
-Security technique restricting user to specific directory tree. User cannot access files outside chroot directory. Common use: SFTP-only users confined to /home/storage_users/{username}/. Example configuration in sshd_config: ChrootDirectory /storage/%u.
-
-**SSH Key**
-
-Cryptographic key pair (public + private) for authentication. Public key stored on server in .ssh/authorized_keys. Private key kept secure on client machine. More secure than passwords: resistant to brute force attacks, no password transmitted over network.
-
-### Automation & Operations
-
-**Idempotent**
-
-Property where running operation multiple times produces same result as running once. Puppet manifests are idempotent: applying manifest 10 times = applying manifest 1 time. Safer for automation - can re-run without unintended side effects. Bash scripts should be designed to be idempotent when possible.
-
-**Provisioning**
-
-Process of creating and configuring resources. In this project: provisioning = creating user account + directory + quota + access controls in single operation. Orchestrated by provision_user.sh script or Puppet manifests.
-
-**Deprovisioning**
-
-Process of removing resources cleanly. In this project: deprovisioning = archiving user data + locking account + deleting user + cleaning up configurations. Opposite of provisioning. Includes backup creation for compliance and recovery purposes.
-
-**Audit Trail**
-
-Record of all system changes and user actions. In this project: all provisioning events logged to /var/log/storage-provisioning/provisioning.log with timestamps and severity levels. Enables troubleshooting, compliance verification, and security investigations.
-
-**Cron Job**
-
-Scheduled task running at specified times. Syntax: "minute hour day month day-of-week command". Common use: daily quota reports, cleanup tasks, backups. In this project: can schedule daily repquota reports to monitor usage.
-
-**Manifest (Puppet)**
-
-Ruby DSL file defining desired system state. Contains resource declarations (users, files, services, etc). File extension: .pp. Example: manifests/user.pp defines how storage users should be created. Applied using "puppet apply" command.
-
-### Monitoring & Logging
-
-**Log File**
-
-Text file recording system events with timestamps. In this project: /var/log/storage-provisioning/provisioning.log records all provisioning operations. Format: [TIMESTAMP] [LEVEL] message. Levels: INFO (normal operation), ERROR (problems), WARNING (potential issues).
-
-**Repquota**
-
-Command-line tool reporting disk quota usage for all users. Shows: username, disk usage, soft limit, hard limit, grace period. Output example shows which users are near or over quota. Used for monitoring and capacity planning.
-
-**Syslog / Journald**
-
-Central logging system collecting messages from all system services. Syslog is traditional logging daemon. Journald is modern systemd-based logging. Both can receive log messages from custom applications via /dev/log socket.
-
-**Metrics**
-
-Quantitative measurements of system performance and activity. Examples: users provisioned, quota utilization, error rate, operation latency. Tracked over time to identify trends and issues. Can be fed to monitoring systems like Prometheus or Grafana.
-
-### Backup & Recovery
-
-**Backup**
-
-Copy of user data for disaster recovery. In this project: created before deprovisioning user account. Format: tar.gz (compressed archive). Stored in /var/backups/deprovisioned_users/ with 30-day retention policy. Metadata file (.meta) records: username, UID, backup date, restore command.
-
-**Snapshot**
-
-Point-in-time copy of filesystem state. Different from backup: snapshot stored on same system, faster restore, but lost if primary storage fails. Future enhancement: Ceph or btrfs snapshots for faster recovery. Current project uses tar-based backups.
-
-**Retention Policy**
-
-Rules determining how long backups are kept. In this project: 30-day retention for deprovisioned user backups. After expiration, backups auto-deleted to save space. Balances compliance requirements (keep data) with storage costs (don't keep forever).
+#### XFS (X File System)
+High-performance Linux filesystem used by Rocky Linux.  
+- Supports project-based and user-based quotas natively.  
+- Optimized for large files and concurrent I/O workloads.  
+- Default filesystem for Rocky Linux and RHEL.  
+- Tools: `xfs_quota`, `setquota`.
+
+#### Puppet
+Infrastructure-as-Code (IaC) automation framework for system configuration management.  
+- Declarative and idempotent: applying the same manifest multiple times yields the same result.  
+- Manifests describe desired system states (`init.pp`, `user.pp`).  
+- Ensures consistent provisioning across multiple systems.
+
+#### Bash
+Standard Linux shell used for scripting direct provisioning and administrative tasks.  
+- Executes core Linux utilities (`useradd`, `chmod`, `xfs_quota`).  
+- Ideal for lightweight, ad-hoc, and test operations.  
+- Integrates with Puppet for hybrid automation.
+
+#### SSH (Secure Shell)
+Encrypted protocol for secure remote access and file transfer (SFTP).  
+- SSH Keys provide stronger authentication than passwords.  
+- Chroot can restrict users to their home directories.  
+- Configurable for per-user or per-group access.
+
+#### Rocky Linux / RHEL
+Enterprise-grade Linux distribution compatible with Red Hat Enterprise Linux (RHEL).  
+- Stable, long-term support for enterprise environments.  
+- Standardized tooling and predictable updates.  
+- Default target OS for this project.
+
+#### Sudo
+Command-line utility that grants temporary root privileges.  
+- Requires password confirmation for traceability.  
+- All privileged provisioning operations use `sudo`.  
+- Creates audit trail for administrative actions.
+
+---
+
+### Storage and Quota Concepts
+
+| Concept | Description |
+|----------|-------------|
+| **Quota** | Disk space or inode limit assigned per user or group. Soft limits warn; hard limits enforce absolute ceilings. Prevents single users from exhausting shared storage. |
+| **Inode** | Metadata structure storing file information (name, permissions, ownership, timestamps). Each file consumes one inode. Systems can run out of inodes even with free disk space. |
+| **Filesystem** | Logical structure organizing files and directories. XFS supports quotas natively and scales efficiently for large datasets. Mount points attach filesystems to the Linux hierarchy. |
+| **SELinux (Security-Enhanced Linux)** | Mandatory access control system extending beyond Unix permissions. Assigns security contexts to files and processes, enforcing policy-based restrictions. |
+
+---
+
+### User and Group Management
+
+#### User Account
+Unique system identity representing an individual or service.  
+- Identified by a UID (user ID).  
+- Associated with a shell, group memberships, and home directory.  
+- Created with `useradd`; removed with `userdel -r`.  
+- Default home: `/home/storage_users/{username}/`.
+
+#### Group
+Collection of users sharing common permissions.  
+- Identified by a GID (group ID).  
+- Example: `storage_users` group for all provisioned accounts.  
+- Simplifies access control by managing permissions at group level.
+
+#### Home Directory
+Primary directory for user files and configuration.  
+- Located under `/home/storage_users/{username}/`.  
+- Owned by the user with mode `700` (owner-only access).  
+- Contains subdirectories: `data/`, `backups/`, `temp/`, `logs/`.
+
+#### PAM (Pluggable Authentication Modules)
+Linux subsystem for authentication and session management.  
+- Controls password verification, lockouts, and session policies.  
+- Can enforce password expiration or login restrictions.
+
+---
+
+### Access Control and Security
+
+| Term | Purpose |
+|------|----------|
+| **Authentication** | Verifies user identity. Uses passwords (temporary), SSH keys (cryptographic), or Puppet certificates. |
+| **Authorization** | Determines permitted actions after authentication. Admins can provision and deprovision; users can only manage their own files. |
+| **Chroot** | Restricts a user’s visible filesystem to a specific directory, e.g., `/home/storage_users/{username}/`. Common for SFTP-only access. |
+| **SSH Key** | Public/private key pair for secure authentication. The public key is stored in `.ssh/authorized_keys`; the private key remains on the client. |
+
+---
+
+### Automation and Operations
+
+#### Idempotent
+Property where running an operation multiple times produces the same outcome as running it once.  
+- Puppet manifests are idempotent by design.  
+- Ensures safe, repeatable automation.
+
+#### Provisioning
+Creating and configuring new resources such as user accounts, directories, quotas, and permissions in one operation.  
+- Implemented via `provision_user.sh` and Puppet manifests.  
+- Validates inputs, creates user, applies quotas, and configures access.
+
+#### Deprovisioning
+Clean removal of user resources with audit and backup.  
+- Archives user data before deletion.  
+- Locks account, removes quotas, deletes directory.  
+- Retains backup and metadata for compliance tracking.
+
+#### Audit Trail
+Comprehensive record of provisioning, deprovisioning, and system events.  
+- Stored in `/var/log/storage-provisioning/provisioning.log`.  
+- Includes timestamps, severity levels, and operation status.  
+- Integrates with syslog or ELK for centralized analysis.
+
+#### Cron Job
+Scheduled task for recurring automation.  
+- Examples: daily quota reports, cleanup scripts, or backup retention enforcement.  
+- Configured via system `crontab` or under `/etc/cron.*`.
+
+#### Manifest (Puppet)
+Puppet configuration file (`.pp`) defining desired system state.  
+- Written in Puppet’s Ruby-based DSL.  
+- Applied via `puppet apply <manifest>` to enforce configuration.  
+
+---
+
+### Monitoring and Logging
+
+| Term | Description |
+|------|--------------|
+| **Log File** | Text-based record of events with timestamps and severity levels (`INFO`, `ERROR`, `WARNING`). Primary log: `/var/log/storage-provisioning/provisioning.log`. |
+| **Repquota** | Command-line utility for reporting disk quota usage. Displays usage, limits, and grace periods. |
+| **Syslog / Journald** | Centralized Linux logging systems. Syslog is traditional; Journald is systemd-based. Can receive logs from provisioning scripts. |
+| **Metrics** | Quantitative indicators for monitoring system health. Examples: users provisioned, quota utilization, error rate, and operation latency. |
+
+---
+
+### Backup and Recovery
+
+#### Backup
+Compressed copy (`.tar.gz`) of a user’s data for disaster recovery.  
+- Created automatically during deprovisioning.  
+- Includes metadata file with timestamp, username, and size.  
+- Stored under `/var/backups/deprovisioned_users/`.
+
+#### Snapshot
+Point-in-time filesystem copy.  
+- Faster restore but stored on the same system (not durable if disk fails).  
+- Future support planned for snapshot-capable systems (e.g., Btrfs, Ceph).
+
+#### Retention Policy
+Defines how long backups are preserved before deletion.  
+- Default: 30 days for deprovisioned user backups.  
+- Balances compliance requirements and storage efficiency.
