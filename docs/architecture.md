@@ -70,46 +70,40 @@ graph TB
     subgraph L2["Level 2: Orchestration"]
         Prov["Provisioning Engine"]
         Deprov["Deprovisioning Engine"]
-        Utils["Utilities<br/>Logging<br/>Validation"]
+        Utils["Utilities<br/>Logging / Validation"]
     end
-    
-    subgraph L3["Level 3: System Integration"]
-        User_Tools["useradd/userdel/usermod"]
-        Group_Tools["groupadd/groupmod"]
-        Quota_Tools["xfs_quota/setquota"]
-        File_Tools["mkdir/chown/chmod"]
-        SSH_Tools["sshd/SSH keys"]
-        Audit_Tools["auditd/syslog"]
+
+    %% Level 3: System Tools
+    subgraph L3["Level 3: System Tools"]
+        subgraph UserMgmt["User & Group Tools"]
+            UserTools["useradd / userdel / usermod"]
+            GroupTools["groupadd / groupmod"]
+        end
+        subgraph Quotas["Quota Management"]
+            QuotaTools["xfs_quota / setquota"]
+        end
+        subgraph FileOps["Filesystem Tools"]
+            FileTools["mkdir / chown / chmod"]
+        end
+        subgraph SSH["SSH & Access"]
+            SSH_Tools["sshd / SSH Keys"]
+        end
+        subgraph Audit["Audit & Logging"]
+            Audit_Tools["auditd / syslog"]
+        end
     end
-    
+
+    %% Level 4: Storage
     subgraph L4["Level 4: Storage"]
-        User_Home["/home/storage_users/{user}/"]
-        System_Logs["/var/log/storage-provisioning/"]
-        Backups["/var/backups/deprovisioned_users/"]
+        Storage["User Homes / Logs / Backups"]
     end
-    
-    CLI --> Prov
-    Puppet_UI --> Prov
-    Batch --> Prov
-    
-    Prov --> Utils
-    Deprov --> Utils
-    
-    Prov --> User_Tools
-    Prov --> Quota_Tools
-    Prov --> File_Tools
-    Prov --> SSH_Tools
-    Prov --> Audit_Tools
-    
-    Deprov --> User_Tools
-    Deprov --> Quota_Tools
-    Deprov --> Audit_Tools
-    
-    User_Tools --> L4
-    Quota_Tools --> L4
-    File_Tools --> L4
-    Audit_Tools --> L4
-    
+
+    %% Connections
+    L1 --> |CLI| L2
+    L2 --> |Orchestrates| L3
+    L3 --> |Manages| L4
+
+    %% Styling for colored borders
     style L1 stroke:#1e88e5,stroke-width:2px,fill:none,color:#1e88e5
     style L2 stroke:#8e24aa,stroke-width:2px,fill:none,color:#8e24aa
     style L3 stroke:#fb8c00,stroke-width:2px,fill:none,color:#fb8c00
@@ -119,6 +113,7 @@ graph TB
 ## Data Flow: Provisioning User
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'background': 'transparent', 'noteBkgColor': 'transparent' }}}%%
 sequenceDiagram
     actor Admin
     participant Script as provision_user.sh
@@ -128,21 +123,21 @@ sequenceDiagram
 
     Admin->>Script: ./provision_user.sh alice -q 10G
     
-    rect stroke:#1e88e5,stroke-width:3px
+    rect stroke:#1e88e5,stroke-width:3px,fill:none
     Note over Script: Validation Phase
     Script->>Script: Validate username format
     Script->>Script: Validate quota format
     Script->>System: Check if user exists
     end
     
-    rect stroke:#43a047,stroke-width:3px
+    rect stroke:#43a047,stroke-width:3px,fill:none
     Note over Script: User Creation Phase
     Script->>System: useradd alice
     Script->>System: groupadd storage_users
     Script->>System: Generate temp password
     end
     
-    rect stroke:#ffc107,stroke-width:3px
+    rect stroke:#ffc107,stroke-width:3px,fill:none
     Note over Script: Directory Setup Phase
     Script->>FS: mkdir /home/storage_users/alice
     Script->>FS: chown alice:storage_users
@@ -150,13 +145,13 @@ sequenceDiagram
     Script->>FS: Create subdirs (data,backups,temp,logs)
     end
     
-    rect stroke:#f44336,stroke-width:3px
+    rect stroke:#f44336,stroke-width:3px,fill:none
     Note over Script: Quota Enforcement Phase
     Script->>System: xfs_quota set 10G limit
     Script->>System: xfs_quota verify
     end
     
-    rect stroke:#9c27b0,stroke-width:3px
+    rect stroke:#9c27b0,stroke-width:3px,fill:none
     Note over Script: Access Control Phase
     Script->>System: SSH access: DENY
     Script->>System: Add SELinux context
@@ -170,25 +165,26 @@ sequenceDiagram
 ## Data Flow: Deprovisioning User
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'background': 'transparent', 'noteBkgColor': 'transparent' }}}%%
 sequenceDiagram
     actor Admin
     participant Script as deprovision_user.sh
     participant System as Linux System
-    participant Backup as Backup Storage
+    participant FS as XFS Filesystem
+    participant Backup as Backup System
     participant Log as Logs
 
     Admin->>Script: ./deprovision_user.sh alice --backup
     
-    rect stroke:#f44336,stroke-width:3px
+    rect stroke:#f44336,stroke-width:3px,fill:none
     Note over Script: Safety Phase
     Script->>System: Verify user exists
     Script->>Admin: Display warning
-    Script->>Admin: Require 'yes' confirmation
-    Admin->>Script: yes
+    Script->>System: Check running processes
     Script->>System: Gather user info (UID, disk usage)
     end
     
-    rect stroke:#ff9800,stroke-width:3px
+    rect stroke:#ff9800,stroke-width:3px,fill:none
     Note over Script: Backup Phase
     Script->>System: Read /home/storage_users/alice
     Script->>Backup: tar -czf alice_TIMESTAMP.tar.gz
@@ -196,15 +192,15 @@ sequenceDiagram
     Script->>Log: [INFO] Backup created
     end
     
-    rect stroke:#3f51b5,stroke-width:3px
+    rect stroke:#3f51b5,stroke-width:3px,fill:none
     Note over Script: Account Termination Phase
     Script->>System: passwd -l alice (lock account)
     Script->>System: pkill -u alice (kill processes)
-    Script->>System: Remove cron jobs
+    Script->>System: usermod -s /sbin/nologin alice
     Script->>System: xfs_quota remove limits
     end
     
-    rect stroke:#e91e63,stroke-width:3px
+    rect stroke:#e91e63,stroke-width:3px,fill:none
     Note over Script: Cleanup Phase
     Script->>System: userdel -r alice
     Script->>System: rm -rf /home/storage_users/alice
@@ -376,10 +372,10 @@ graph LR
     G --> H["Delete User"]
     H --> I["Deprovisioned"]
     
-    style A stroke:#f44336,stroke-width:2px,fill:none
+    style A stroke:#9c27b0,stroke-width:2px,fill:none
     style B stroke:#ffc107,stroke-width:2px,fill:none
     style I stroke:#43a047,stroke-width:2px,fill:none
-    style D color:#d32f2f
+    style D stroke:#f44336,stroke-width:2px,fill:none
 ```
 
 ---
@@ -513,10 +509,6 @@ If provisioning fails:
 
 ## Terminology & Concepts
 
-> This section defines the key terms, technologies, and operational concepts used throughout the Automated Storage Provisioning Tool.
-
----
-
 ### Core Technologies
 
 #### XFS (X File System)
@@ -556,8 +548,6 @@ Command-line utility that grants temporary root privileges.
 - All privileged provisioning operations use `sudo`.  
 - Creates audit trail for administrative actions.
 
----
-
 ### Storage and Quota Concepts
 
 | Concept | Description |
@@ -566,8 +556,6 @@ Command-line utility that grants temporary root privileges.
 | **Inode** | Metadata structure storing file information (name, permissions, ownership, timestamps). Each file consumes one inode. Systems can run out of inodes even with free disk space. |
 | **Filesystem** | Logical structure organizing files and directories. XFS supports quotas natively and scales efficiently for large datasets. Mount points attach filesystems to the Linux hierarchy. |
 | **SELinux (Security-Enhanced Linux)** | Mandatory access control system extending beyond Unix permissions. Assigns security contexts to files and processes, enforcing policy-based restrictions. |
-
----
 
 ### User and Group Management
 
@@ -595,8 +583,6 @@ Linux subsystem for authentication and session management.
 - Controls password verification, lockouts, and session policies.  
 - Can enforce password expiration or login restrictions.
 
----
-
 ### Access Control and Security
 
 | Term | Purpose |
@@ -605,8 +591,6 @@ Linux subsystem for authentication and session management.
 | **Authorization** | Determines permitted actions after authentication. Admins can provision and deprovision; users can only manage their own files. |
 | **Chroot** | Restricts a user’s visible filesystem to a specific directory, e.g., `/home/storage_users/{username}/`. Common for SFTP-only access. |
 | **SSH Key** | Public/private key pair for secure authentication. The public key is stored in `.ssh/authorized_keys`; the private key remains on the client. |
-
----
 
 ### Automation and Operations
 
@@ -642,8 +626,6 @@ Puppet configuration file (`.pp`) defining desired system state.
 - Written in Puppet’s Ruby-based DSL.  
 - Applied via `puppet apply <manifest>` to enforce configuration.  
 
----
-
 ### Monitoring and Logging
 
 | Term | Description |
@@ -652,8 +634,6 @@ Puppet configuration file (`.pp`) defining desired system state.
 | **Repquota** | Command-line utility for reporting disk quota usage. Displays usage, limits, and grace periods. |
 | **Syslog / Journald** | Centralized Linux logging systems. Syslog is traditional; Journald is systemd-based. Can receive logs from provisioning scripts. |
 | **Metrics** | Quantitative indicators for monitoring system health. Examples: users provisioned, quota utilization, error rate, and operation latency. |
-
----
 
 ### Backup and Recovery
 
