@@ -7,7 +7,7 @@
 [![Status](https://img.shields.io/badge/Status-Active-green)](https://github.com/yourusername/automated-storage-provisioning)
 [![Maintained](https://img.shields.io/maintenance/yes/2025)](https://github.com/yourusername/automated-storage-provisioning)
 
-Automate user account creation, directory provisioning, disk quota management, and cleanup on Rocky Linux using **Puppet** and **Bash scripts**. Perfect for multi-user environments requiring consistent storage management.
+Automate user account creation, directory provisioning, disk quota management, and cleanup on Rocky Linux using Puppet and Bash scripts. Perfect for multi-user environments requiring consistent storage management.
 
 ## Quick Start
 
@@ -17,20 +17,15 @@ Automate user account creation, directory provisioning, disk quota management, a
 # Clone the repository
 git clone <your-repo-url>
 cd automated-storage-provisioning
-
 # Install dependencies
 sudo dnf install -y puppet quota xfsprogs openssh-server git
-
 # Run initial setup
 sudo ./scripts/provision_user.sh newuser
-
 # Verify
 repquota -a
 ```
 
 That's it! A new user is created with a managed storage directory and 2GB quota.
-
----
 
 ## Table of Contents
 
@@ -41,21 +36,24 @@ That's it! A new user is created with a managed storage directory and 2GB quota.
 - [Architecture](#architecture)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
+- [Testing](#testing)
+- [Monitoring & Maintenance](#monitoring--maintenance)
+- [Optional Enhancements](#optional-enhancements)
 - [Contributing](#contributing)
-
----
+- [License](#license)
+- [Support](#support)
+- [Authors](#authors)
+- [Changelog](#changelog)
 
 ## Features
 
-**Automated User Provisioning** — Create users with one command  
-**Disk Quotas** — Enforce soft/hard limits automatically  
-**Access Control** — SSH/SFTP with chroot isolation (optional)  
-**Batch Operations** — Provision multiple users from a file  
-**Safe Deprovisioning** — Clean removal with backup options  
-**Puppet Integration** — Infrastructure-as-Code configuration management  
-**Monitoring** — Track usage and quota violations  
-
----
+- **Automated User Provisioning** — Create users with one command
+- **Disk Quotas** — Enforce soft/hard limits automatically
+- **Access Control** — SSH/SFTP with chroot isolation (optional)
+- **Batch Operations** — Provision multiple users from a file
+- **Safe Deprovisioning** — Clean removal with backup options
+- **Puppet Integration** — Infrastructure-as-Code configuration management
+- **Monitoring** — Track usage and quota violations
 
 ## Prerequisites
 
@@ -66,16 +64,13 @@ That's it! A new user is created with a managed storage directory and 2GB quota.
 - **Packages:** Puppet 7+, quota-tools, xfsprogs
 
 ### Why Rocky Linux?
-
 Rocky Linux is enterprise-grade, RHEL-compatible, and provides stable support for Puppet, Ansible, and system utilities — ideal for long-term infrastructure automation.
-
----
 
 ## Installation
 
 ### 1. VM Setup
-
 Create a Rocky Linux VM with:
+
 - 2 CPU cores
 - 4GB RAM
 - 20–40GB disk (XFS filesystem)
@@ -86,22 +81,18 @@ Create a Rocky Linux VM with:
 ```bash
 # Enable SSH
 sudo systemctl enable --now sshd
-
 # Update system
 sudo dnf update -y
-
 # Install required packages
 sudo dnf install -y puppet quota xfsprogs openssh-server vim git
-
 # Enable quota services
 sudo systemctl enable --now quotaon
 ```
 
 ### 3. Configure Quotas on Filesystem
-
 Edit `/etc/fstab`:
 
-```
+```text
 /dev/sda1 / xfs defaults,uquota 0 0
 ```
 
@@ -118,7 +109,6 @@ sudo quotaon /
 ```bash
 git clone <your-repo-url>
 cd automated-storage-provisioning
-
 # Make scripts executable
 chmod +x scripts/*.sh
 ```
@@ -129,8 +119,6 @@ chmod +x scripts/*.sh
 sudo cp manifests/*.pp /etc/puppetlabs/code/environments/production/manifests/
 sudo puppet apply /etc/puppetlabs/code/environments/production/manifests/init.pp
 ```
-
----
 
 ## Usage
 
@@ -151,7 +139,7 @@ sequenceDiagram
     actor Admin
     participant Script as provision_user.sh
     participant System as Linux System
-    
+   
     Admin->>Script: ./provision_user.sh alice
     Script->>Script: Validate input
     Script->>System: useradd alice
@@ -162,10 +150,9 @@ sequenceDiagram
 ```
 
 ### Provision Multiple Users
-
 Create a file `users.txt`:
 
-```
+```text
 alice
 bob
 charlie
@@ -190,7 +177,7 @@ sudo ./scripts/set_quota.sh alice 5000000 6000000
 
 ```bash
 sudo quota -u alice
-sudo repquota -a  # Show all users
+sudo repquota -a # Show all users
 ```
 
 ### Deprovision a User
@@ -215,9 +202,9 @@ graph LR
     F --> G["Kill Processes"]
     G --> H["Delete User"]
     H --> I["Deprovisioned<br/>Backup: 30 days"]
-    
-    style I fill:#c8e6c9
-    style D fill:#ffcdd2
+   
+    style I fill:none,stroke:#43a047,stroke-width:2px
+    style D fill:none,stroke:#d32f2f,stroke-width:2px
 ```
 
 ### Deploy via Puppet
@@ -232,43 +219,39 @@ For per-user provisioning:
 sudo puppet apply -e "include storage_provisioning::users"
 ```
 
----
-
 ## Architecture
 
 ### Directory Structure
 
 ```
 automated-storage-provisioning/
-├── README.md                    # This file
+├── README.md # This file
 ├── .gitignore
-├── sync.sh                      # Sync script for batch operations
+├── sync.sh # Sync script for batch operations
 │
 ├── docs/
-│   └── architecture.md          # Detailed architecture documentation
+│   └── architecture.md # Detailed architecture documentation
 │
 ├── scripts/
-│   ├── provision_user.sh        # Create new user + storage
-│   ├── deprovision_user.sh      # Remove user + cleanup
-│   ├── set_quota.sh             # Manage disk quotas
-│   └── utils.sh                 # Shared utility functions
+│   ├── provision_user.sh # Create new user + storage
+│   ├── deprovision_user.sh # Remove user + cleanup
+│   ├── set_quota.sh # Manage disk quotas
+│   └── utils.sh # Shared utility functions
 │
 ├── manifests/
-│   ├── init.pp                  # Main Puppet manifest
-│   ├── user.pp                  # User creation module
-│   └── decommission.pp          # User removal module
+│   ├── init.pp # Main Puppet manifest
+│   ├── user.pp # User creation module
+│   └── decommission.pp # User removal module
 │
 ├── templates/
-│   └── README.txt.epp           # Puppet template for user readme
+│   └── README.txt.epp # Puppet template for user readme
 │
 ├── examples/
-│   └── site.pp                  # Example site configuration
+│   └── site.pp # Example site configuration
 │
-├── logs/                        # Operation logs (auto-generated)
+├── logs/ # Operation logs (auto-generated)
 │
-├── tests/                       # Test scripts and fixtures
-│
-
+└── tests/ # Test scripts and fixtures
 ```
 
 ### Workflow
@@ -287,67 +270,63 @@ graph TD
     J --> K{Deprovision?}
     K -->|Yes| L["Clean Removal"]
     K -->|No| J
-    
-    style A fill:#e3f2fd
-    style I fill:#c8e6c9
-    style L fill:#ffccbc
+   
+    style A fill:none,stroke:#1e88e5,stroke-width:2px
+    style I fill:none,stroke:#43a047,stroke-width:2px
+    style L fill:none,stroke:#ff9800,stroke-width:2px
 ```
 
 ### System Components
 
 ```mermaid
 graph LR
-    subgraph Scripts["📜 Scripts"]
+    subgraph Scripts["Scripts"]
         PS["provision_user.sh"]
         DS["deprovision_user.sh"]
         QS["set_quota.sh"]
         US["utils.sh"]
     end
-    
-    subgraph Puppet_M["🤖 Puppet"]
+   
+    subgraph Puppet_M["Puppet"]
         Init["init.pp"]
         User["user.pp"]
         Decom["decommission.pp"]
     end
-    
-    subgraph System["🔧 System"]
+   
+    subgraph System["System"]
         Quota["Quota Subsystem"]
         Access["SSH/SFTP Access"]
         Logs["Logs & Audit"]
     end
-    
+   
     Scripts --> System
     Puppet_M --> System
-    System --> Storage["💾 Storage"]
-    
-    style Storage fill:#c8e6c9
+    System --> Storage["Storage"]
+   
+    style Scripts fill:none,stroke:#ff9800,stroke-width:2px
+    style Puppet_M fill:none,stroke:#9c27b0,stroke-width:2px
+    style System fill:none,stroke:#f44336,stroke-width:2px
+    style Storage fill:none,stroke:#43a047,stroke-width:2px
 ```
-
----
 
 ## Configuration
 
 ### Customizable Parameters
-
 Edit `scripts/provision_user.sh` to adjust defaults:
 
 ```bash
 # Storage base directory
 STORAGE_DIR="/storage"
-
 # Default quotas (in 1K blocks)
-QUOTA_SOFT=2000000    # 2GB soft limit
-QUOTA_HARD=2500000    # 2.5GB hard limit
-
+QUOTA_SOFT=2000000 # 2GB soft limit
+QUOTA_HARD=2500000 # 2.5GB hard limit
 # User group
 GROUP="storageusers"
-
 # Shell and home prefix
 SHELL="/bin/bash"
 ```
 
 ### Shared Directories
-
 Create shared group storage:
 
 ```bash
@@ -357,10 +336,9 @@ sudo chmod 770 /storage/shared
 ```
 
 ### SSH/SFTP Chroot (Optional)
-
 Edit `/etc/ssh/sshd_config`:
 
-```
+```text
 Match Group storageusers
     ChrootDirectory /storage/%u
     ForceCommand internal-sftp
@@ -376,14 +354,10 @@ Then restart SSH:
 sudo systemctl restart sshd
 ```
 
----
-
 ## Troubleshooting
 
 ### Issue: "quotaon: No such file or directory"
-
 **Solution:** Verify `/etc/fstab` has `uquota` option and filesystem is remounted:
-
 ```bash
 grep uquota /etc/fstab
 sudo mount -o remount /
@@ -391,51 +365,39 @@ sudo quotacheck -cum /
 ```
 
 ### Issue: User created but quota not applied
-
 **Solution:** Check if quotas are enabled:
-
 ```bash
 sudo quotaon -av
 sudo repquota -a
 ```
 
 ### Issue: "Permission denied" when running scripts
-
 **Solution:** Make scripts executable and run with sudo:
-
 ```bash
 chmod +x scripts/*.sh
 sudo ./scripts/provision_user.sh username
 ```
 
 ### Issue: SSH login fails for newly created user
-
 **Solution:** Verify user home directory permissions:
-
 ```bash
 sudo ls -ld /storage/username
 sudo chmod 700 /storage/username
 ```
 
 ### Issue: Puppet manifest won't apply
-
 **Solution:** Check Puppet syntax and logs:
-
 ```bash
 sudo puppet parser validate manifests/init.pp
 sudo puppet apply --debug manifests/init.pp
 ```
 
 ### Issue: Can't remove user due to running processes
-
 **Solution:** Kill user processes then retry:
-
 ```bash
 sudo pkill -u username
 sudo ./scripts/deprovision_user.sh username
 ```
-
----
 
 ## Testing
 
@@ -446,13 +408,11 @@ Run the test suite to verify functionality:
 sudo ./scripts/provision_user.sh testuser
 sudo quota -u testuser
 sudo repquota -a
-
 # Test quota enforcement
-dd if=/dev/zero of=/storage/testuser/testfile bs=1M count=3000  # Should hit limit
-
+dd if=/dev/zero of=/storage/testuser/testfile bs=1M count=3000 # Should hit limit
 # Test deprovisioning
 sudo ./scripts/deprovision_user.sh testuser
-getent passwd testuser  # Should fail (user deleted)
+getent passwd testuser # Should fail (user deleted)
 ```
 
 ```mermaid
@@ -464,13 +424,11 @@ graph TD
     E --> F["Deprovision testuser"]
     F --> G["Verify deletion"]
     G --> H["All tests passed"]
-    
-    style H fill:#c8e6c9
-    style B fill:#fff9c4
-    style F fill:#ffe0b2
+   
+    style H fill:none,stroke:#43a047,stroke-width:2px
+    style B fill:none,stroke:#ffc107,stroke-width:2px
+    style F fill:none,stroke:#ff9800,stroke-width:2px
 ```
-
----
 
 ## Monitoring & Maintenance
 
@@ -479,21 +437,17 @@ graph TD
 ```bash
 # Single user
 sudo quota -u alice
-
 # All users
 sudo repquota -a
-
 # Directory size
 sudo du -sh /storage/*
 ```
 
 ### Daily Quota Report (Cron)
-
 Add to crontab:
 
 ```bash
 sudo crontab -e
-
 # Add this line:
 0 0 * * * repquota -a > /var/log/daily_quota_report.txt
 ```
@@ -505,8 +459,6 @@ sudo crontab -e
 sudo repquota -a | grep "+"
 ```
 
----
-
 ## Optional Enhancements
 
 - **LDAP Integration** — Centralized user management across multiple systems
@@ -517,8 +469,6 @@ sudo repquota -a | grep "+"
 - **API** — RESTful endpoint for programmatic user management
 - **Audit Logging** — Integration with syslog or ELK stack
 
----
-
 ## Contributing
 
 Contributions welcome! Please:
@@ -528,28 +478,21 @@ Contributions welcome! Please:
 3. Test thoroughly (`tests/` directory)
 4. Submit a pull request with clear description
 
----
-
 ## License
 
 [Add your license here — MIT, GPL, etc.]
 
----
-
 ## Support
 
 For issues, questions, or feature requests:
-- Open an issue on GitHub
-- Check `docs/architecture.md` for technical details
 
----
+- Open an issue on GitHub
+- Check [docs/architecture.md](docs/architecture.md) for technical details
 
 ## Authors
 
-- **Your Name** — Initial development
-
----
+- Your Name — Initial development
 
 ## Changelog
 
-See `docs/architecture.md` for technical deep-dives and design decisions.
+See [docs/architecture.md](docs/architecture.md) for technical deep-dives and design decisions.
