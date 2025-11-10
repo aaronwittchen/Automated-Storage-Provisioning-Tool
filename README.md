@@ -11,6 +11,21 @@ Automate user account creation, directory provisioning, disk quota management, a
 
 > **Work in Progress**
 
+## Development Workflow
+
+For local development with a VM, use the sync scripts to easily transfer files:
+
+```bash
+# Make scripts executable
+chmod +x scripts/*.sh
+
+# (Optional) Set up personal sync config
+./sync_vm.sh --setup-config
+
+# Edit ~/.sync_vm.conf with your VM details, then sync!
+./sync_vm.sh push
+```
+
 ## Quick Start
 
 **Prerequisites:** Rocky Linux VM, 2+ CPU cores, 4GB RAM, Puppet, and sudo access

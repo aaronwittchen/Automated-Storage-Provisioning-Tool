@@ -27,7 +27,7 @@ Here's an **improved, detailed step-by-step plan** for your Automated Storage Pr
    ping -c 4 google.com
    output:
 
-[yeah@localhost ~]$ ip addr show
+[rocky-vm@localhost ~]$ ip addr show
 1: lo: <LOOPBACK, UP, LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group defaul t qlen 1000
 link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 inet 127.0.0.1/8 scope host lo
@@ -39,14 +39,14 @@ link/ether 08:00:27:ed: 5f:47 brd ff:ff:ff:ff:ff:ff
 inet 10.0.2.15/24 brd 10.0.2.255 scope global dynamic noprefixroute enp0s3 valid_lft 84565sec preferred_lft 84565sec
 inet6 fe80::a00:27ff: feed: 5f47/64 scope link noprefixroute
 valid_lft forever preferred_lft forever
-[yeah@localhost ~]$ ping -c 4 google.com
+[rocky-vm@localhost ~]$ ping -c 4 google.com
 PING google.com (142.250.185.110) 56(84) bytes of data.
 64 bytes from fra16s49-in-f14.1e100.net (142.250.185.110): icmp_seq=1 ttl=117 ti me=14.8 ms
 64 bytes from fra16s49-in-f14.1e100.net (142.250.185.110): icmp_seq=2 ttl=117 ti me=14.5 ms
 64 bytes from fra16s49-in-f14.1e100.net (142.250.185.110): icmp_seq=3 ttl=117 ti me=14.1 ms
 64 bytes from fra16s49-in-f14.1e100.net (142.250.185.110): icmp_seq=4 ttl=117 ti me=57.9 ms
 google.com ping statistics
-4 packets transmitted, 4 received, 0% packet loss, time 3004ms rtt min/avg/max/mdev = 14.091/25.324/57.930/18.826 ms [yeah@localhost ~]$ |
+4 packets transmitted, 4 received, 0% packet loss, time 3004ms rtt min/avg/max/mdev = 14.091/25.324/57.930/18.826 ms [rocky-vm@localhost ~]$ |
 
 
    # Set hostname (optional but professional)
@@ -57,7 +57,7 @@ google.com ping statistics
 
    output:
    
-[yeah@localhost ~]$ df -T / Filesystem
+[rocky-vm@localhost ~]$ df -T / Filesystem
 /dev/mapper/rl-root xfs
 Type 1K-blocks
 Used Available Use% Mounted on 17756160 6540412 11215748 37% /
@@ -277,7 +277,7 @@ VM > Settings > Network > Adapter 1 Bridged adapter
    ```
    
    Now you can simply: `ssh storage-vm`
-ssh yeah@192.168.68.105
+ssh rocky-vm@192.168.68.105
 
 Here's a **detailed step-by-step guide** for setting up SSH key-based authentication:
 
@@ -350,11 +350,11 @@ SHA256:... storage-provisioning-project
 **Still on your host machine:**
 
 ```bash
-ssh-copy-id yeah@10.0.2.15
+ssh-copy-id rocky-vm@10.0.2.15
 ```
 
 **Replace:**
-- `yeah` with your VM username (the one you created during Rocky Linux installation)
+- `rocky-vm` with your VM username (the one you created during Rocky Linux installation)
 - `10.0.2.15` with your actual VM IP from Part 1
 
 **You'll see:**
@@ -368,7 +368,7 @@ Are you sure you want to continue connecting (yes/no/[fingerprint])?
 **Type:** `yes` and press Enter
 
 ```
-yeah@10.0.2.15's password:
+rocky-vm@10.0.2.15's password:
 ```
 
 **Type your VM user's password** and press Enter
@@ -377,7 +377,7 @@ yeah@10.0.2.15's password:
 ```
 Number of key(s) added: 1
 
-Now try logging into the machine, with:   "ssh 'yeah@10.0.2.15'"
+Now try logging into the machine, with:   "ssh 'rocky-vm@10.0.2.15'"
 and check to make sure that only the key(s) you wanted were added.
 ```
 
@@ -390,7 +390,7 @@ and check to make sure that only the key(s) you wanted were added.
 **On your host machine:**
 
 ```bash
-ssh yeah@10.0.2.15
+ssh rocky-vm@10.0.2.15
 ```
 
 **What should happen:**
@@ -399,7 +399,7 @@ ssh yeah@10.0.2.15
 
 **You should see:**
 ```
-[yeah@localhost ~]$
+[rocky-vm@localhost ~]$
 ```
 
 **You're now logged into the VM without typing the VM password!**
@@ -424,7 +424,7 @@ Step 2: Add the key to the VM
 
 SSH into the VM with your password (just this once):
 
-ssh yeah@192.168.68.105
+ssh rocky-vm@192.168.68.105
 
 
 On the VM, create the .ssh folder in your home directory:
@@ -455,7 +455,7 @@ exit
 
 From your Windows host, SSH again:
 
-ssh yeah@192.168.68.105
+ssh rocky-vm@192.168.68.105
 
 
 You should log in immediately, no password prompt.
@@ -471,7 +471,7 @@ ssh-ed25519 AAAAC3N... storage-provisioning-project
 
 ### **Part 5: Create SSH Config for Easy Access**
 
-This lets you type `ssh storage-vm` instead of `ssh yeah@10.0.2.15` every time.
+This lets you type `ssh storage-vm` instead of `ssh rocky-vm@10.0.2.15` every time.
 
 **On your host machine:**
 
@@ -488,13 +488,13 @@ nano ~/.ssh/config
 ```
 Host storage-vm
     HostName 10.0.2.15
-    User yeah
+    User rocky-vm
     IdentityFile ~/.ssh/id_ed25519
 ```
 
 **Replace:**
 - `10.0.2.15` with your VM's actual IP
-- `yeah` with your VM username
+- `rocky-vm` with your VM username
 
 3. **Save and exit:**
    - In nano: Press `Ctrl+X`, then `Y`, then `Enter`
@@ -519,7 +519,7 @@ ssh storage-vm
 **You should be logged into the VM immediately!**
 
 ```
-[yeah@localhost ~]$
+[rocky-vm@localhost ~]$
 ```
 
 **SSH is now fully configured!**
@@ -529,7 +529,7 @@ ssh storage-vm
 The provided steps are for a Linux/macOS host (using `~` for home and commands like `nano`/`chmod`), but since your host is Windows (based on paths like `C:\Users\theon\.ssh`), we'll adjust them accordingly. Windows OpenSSH uses a similar config file at `C:\Users\yourusername\.ssh\config` (no file extension). You can edit it with Notepad or any text editor. No `chmod` is strictly needed on Windows, as file permissions are handled differently, but we'll ensure it's secure.
 
 **Prerequisites**: 
-- Your pubkey auth is working (from previous fixes—no password prompt when using `ssh -i C:\Users\theon\.ssh\id_ed25519 yeah@192.168.68.105`).
+- Your pubkey auth is working (from previous fixes—no password prompt when using `ssh -i C:\Users\theon\.ssh\id_ed25519 rocky-vm@192.168.68.105`).
 - Use the current VM IP: From context, it's now 192.168.68.105 (not 10.0.2.15, which was the old NAT IP). If it's changed, confirm with `ip addr show` in the VM.
 
 #### Step 1: Create/Edit the SSH Config File on Windows Host
@@ -550,14 +550,14 @@ In Notepad, paste this exact content (replace IP/user/key path if needed):
 ```
 Host storage-vm
     HostName 192.168.68.105
-    User yeah
+    User rocky-vm
     IdentityFile C:\Users\theon\.ssh\id_ed25519
 ```
 
 - **Explanations/Replacements**:
   - `Host storage-vm`: Alias—you can now use `ssh storage-vm` instead of the full command.
   - `HostName 192.168.68.105`: Your VM's IP (use 10.0.2.15 only if back on NAT; confirm with VM's `ip addr show`).
-  - `User yeah`: Your VM username.
+  - `User rocky-vm`: Your VM username.
   - `IdentityFile C:\Users\theon\.ssh\id_ed25519`: Path to your private key (no .pub). Use forward slashes (/) or double backslashes (\\) if needed, but this should work.
 
 Save the file (File > Save) and close Notepad.
@@ -575,7 +575,7 @@ From Command Prompt/PowerShell:
 ssh storage-vm
 ```
 - It should connect directly to the VM without password (or ask for key passphrase if set).
-- Expected: Logs you in, showing something like `[yeah@storage-server ~]$`.
+- Expected: Logs you in, showing something like `[rocky-vm@storage-server ~]$`.
 
 If it prompts for password: 
 - Check config syntax (no extra spaces/tabs; indent with 4 spaces under Host).
@@ -591,7 +591,7 @@ Successfully processed 1 files; Failed processing 0 files
 Activate the web console with: systemctl enable --now cockpit.socket
 
 Last login: Wed Nov  5 20:28:26 2025 from 192.168.68.101
-[yeah@storage-server ~]$ 
+[rocky-vm@storage-server ~]$ 
 
 ---
 
@@ -1004,7 +1004,7 @@ xfs_quota -x -c "report -h" /
 sudo -u testuser01 quota -s
 This will show how much of the 5G quota is used.
 
-4. Exit back to `yeah`:
+4. Exit back to `rocky-vm`:
 
 ```bash
 exit
@@ -1031,17 +1031,17 @@ sudo ./deprovision_user.sh testuser01 --backup
 # Verify backup was created
 ls -lh /var/backups/deprovisioned_users/
 # Should see testuser01_TIMESTAMP.tar.gz
-[yeah@storage-server scripts]$ ls -ld /var/backups/deprovisioned_users
+[rocky-vm@storage-server scripts]$ ls -ld /var/backups/deprovisioned_users
 drwx------. 2 root root 93 Nov  5 22:18 /var/backups/deprovisioned_users
-[yeah@storage-server scripts]$ sudo ls -lh /var/backups/deprovisioned_users/
+[rocky-vm@storage-server scripts]$ sudo ls -lh /var/backups/deprovisioned_users/
 total 108K
 -rw-r--r--. 1 root root 101K Nov  5 22:18 testuser01_20251105_221839.tar.gz
 -rw-------. 1 root root  250 Nov  5 22:18 testuser01_20251105_221839.tar.gz.meta
-[yeah@storage-server scripts]$ sudo ls -lh /var/backups/deprovisioned_users/
+[rocky-vm@storage-server scripts]$ sudo ls -lh /var/backups/deprovisioned_users/
 total 108K
 -rw-r--r--. 1 root root 101K Nov  5 22:18 testuser01_20251105_221839.tar.gz
 -rw-------. 1 root root  250 Nov  5 22:18 testuser01_20251105_221839.tar.gz.meta
-[yeah@storage-server scripts]$ sudo tree /var/backups/deprovisioned_users/
+[rocky-vm@storage-server scripts]$ sudo tree /var/backups/deprovisioned_users/
 /var/backups/deprovisioned_users/
 ├── testuser01_20251105_221839.tar.gz
 └── testuser01_20251105_221839.tar.gz.meta
@@ -1053,7 +1053,7 @@ cat /var/backups/deprovisioned_users/testuser01_*.meta
 # Verify user is gone
 id testuser01  # Should fail with "no such user"
 ls /home/storage_users/testuser01  # Should not exist
-[yeah@storage-server scripts]$ sudo cat /var/backups/deprovisioned_users/testuser01_20251105_221839.tar.gz.meta
+[rocky-vm@storage-server scripts]$ sudo cat /var/backups/deprovisioned_users/testuser01_20251105_221839.tar.gz.meta
 Username: testuser01
 UID: 1002
 GID: 1002
@@ -1064,9 +1064,9 @@ Backup Date: Wed Nov  5 10:18:40 PM CET 2025
 Backup Size: 101K
 Retention: 30 days
 Expires: Fri Dec  5 10:18:40 PM CET 2025
-[yeah@storage-server scripts]$
+[rocky-vm@storage-server scripts]$
 ```
-[yeah@storage-server scripts]$ sudo ./deprovision_user.sh testuser01 --backup
+[rocky-vm@storage-server scripts]$ sudo ./deprovision_user.sh testuser01 --backup
 [INFO] Running pre-flight checks...
 [WARN] =========================================
 [WARN] DEPROVISIONING USER: testuser01
@@ -1139,7 +1139,7 @@ To restore from backup:
   sudo tar -xzf /var/backups/deprovisioned_users/testuser01_20251105_221839.tar.gz -C /
 
 [INFO] Deprovisioning completed at Wed Nov  5 10:18:41 PM CET 2025
-[yeah@storage-server scripts]$
+[rocky-vm@storage-server scripts]$
 
 
 ### **8. Test Force Deprovision (No Prompt)**
@@ -1238,7 +1238,7 @@ Try these steps and let me know what happens! Which step should I help you with 
 
 
 
-[yeah@storage-server scripts]$ sudo ./provision_user.sh testuser01 -q 5G
+[rocky-vm@storage-server scripts]$ sudo ./provision_user.sh testuser01 -q 5G
 [INFO] Running pre-flight checks...
 [INFO] Checking quota support on / (filesystem: xfs)
 [INFO] =========================================
@@ -1300,10 +1300,10 @@ To check quota usage:
   sudo xfs_quota -x -c "report -h" /
 
 To deprovision user:
-  /home/yeah/storage-provisioning/scripts/deprovision_user.sh testuser01
+  /home/rocky-vm/storage-provisioning/scripts/deprovision_user.sh testuser01
 
 [INFO] Provisioning completed at Wed Nov  5 10:10:49 PM CET 2025
-[yeah@storage-server scripts]$
+[rocky-vm@storage-server scripts]$
 
 
 

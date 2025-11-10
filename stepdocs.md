@@ -1,593 +1,3 @@
-## **Phase 1: Environment Setup**
-
-### **Step 1: Install and Configure Rocky Linux VM**
-
-1. **Create the VM:**
-   - Use VirtualBox, VMware, or KVM
-   - Allocate: 2 CPUs, 4GB RAM, 40GB disk
-   - Network: NAT (simplest) or Bridged (if you want VM accessible from other devices)
-
-2. **Install Rocky Linux:**
-   - Download Rocky Linux 9 ISO
-   - Minimal or Server with GUI (your choice)
-   - During installation: create a user account (e.g., `admin`)
-   - Set a strong password or use SSH keys later
-
-3. **Initial VM Configuration:**
-   ```bash
-   # Update system
-   sudo dnf update -y
-   
-   # Check networking
-   ip addr show
-   ping -c 4 google.com
-   output:
-
-[yeah@localhost ~]$ ip addr show
-1: lo: <LOOPBACK, UP, LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group defaul t qlen 1000
-link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-inet 127.0.0.1/8 scope host lo
-valid_lft forever preferred_lft forever
-inet6:1/128 scope host
-valid_lft forever preferred_lft forever
-2: enp0s3: <BROADCAST, MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP gr oup default qlen 1000
-link/ether 08:00:27:ed: 5f:47 brd ff:ff:ff:ff:ff:ff
-inet 10.0.2.15/24 brd 10.0.2.255 scope global dynamic noprefixroute enp0s3 valid_lft 84565sec preferred_lft 84565sec
-inet6 fe80::a00:27ff: feed: 5f47/64 scope link noprefixroute
-valid_lft forever preferred_lft forever
-[yeah@localhost ~]$ ping -c 4 google.com
-PING google.com (142.250.185.110) 56(84) bytes of data.
-64 bytes from fra16s49-in-f14.1e100.net (142.250.185.110): icmp_seq=1 ttl=117 ti me=14.8 ms
-64 bytes from fra16s49-in-f14.1e100.net (142.250.185.110): icmp_seq=2 ttl=117 ti me=14.5 ms
-64 bytes from fra16s49-in-f14.1e100.net (142.250.185.110): icmp_seq=3 ttl=117 ti me=14.1 ms
-64 bytes from fra16s49-in-f14.1e100.net (142.250.185.110): icmp_seq=4 ttl=117 ti me=57.9 ms
-google.com ping statistics
-4 packets transmitted, 4 received, 0% packet loss, time 3004ms rtt min/avg/max/mdev = 14.091/25.324/57.930/18.826 ms [yeah@localhost ~]$ |
-
-
-   # Set hostname (optional but professional)
-   sudo hostnamectl set-hostname storage-server
-   
-   # Check filesystem type (important for quotas)
-   df -T /
-
-   output:
-   
-[yeah@localhost ~]$ df -T / Filesystem
-/dev/mapper/rl-root xfs
-Type 1K-blocks
-Used Available Use% Mounted on 17756160 6540412 11215748 37% /
-   ```
-
-4. **Take a VM Snapshot:**
-   - Name it: "Fresh Install - Before Configuration"
-   - This is your safety net
-
----
-
-### **Step 2: Install Required Packages**
-
-```bash
-# Essential tools
-sudo dnf install -y \
-  vim \
-  git \
-  wget \
-  curl \
-  openssh-server \
-  quota \
-  policycoreutils-python-utils
-
-# For Puppet
-sudo dnf install -y https://yum.puppet.com/puppet7-release-el-9.noarch.rpm
-sudo dnf install -y coreutils
-sudo dnf install -y puppet-agent
-
-sudo dnf install -y epel-release
-sudo dnf install -y tree htop net-tools
-
-# Enable and start SSH
-sudo systemctl enable sshd --now
-sudo systemctl status sshd
-```
-
----
-
-### **Step 3: Configure Disk Quotas**
-
-1. **Check your filesystem:**
-   ```bash
-   df -T /
-   # If it's XFS (Rocky Linux default):
-   # Output will show "xfs" in Type column
-   ```
-
-2. **For XFS filesystem:**
-   ```bash
-   # Check current mount options
-   mount | grep ' / '
-
-   Example output:
-/dev/mapper/rl-root on / type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
-Notice at the end it says noquota — quotas are not enabled yet.
-   
-   # Edit /etc/fstab to add quota options
-   sudo vim /etc/fstab
-   # Find the line for / (root) and add: usrquota,grpquota
-   # Example:
-   # /dev/mapper/rl-root / xfs defaults,usrquota,grpquota 0 0
-   Put your cursor on /dev/mapper/rl-root and press i to enter insert mode.
-
-Reformat it as a single line, like this:
-
-/dev/mapper/rl-root / xfs defaults,usrquota,grpquota 0 0
-
-
-Leave /boot line as-is (don’t add quotas there).
-
-Press Esc, then type :wq to save and exit.
-
-# /etc/fstab
-# Created by anaconda on Wed Nov 5 14:50:43 2025
-#
-# Accessible filesystems, by reference, are maintained under '/dev/disk/'.
-# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info.
-#
-# After editing this file, run 'systemctl daemon-reload' to update systemd
-# units generated from this file.
-
-# Root filesystem with quotas enabled
-/dev/mapper/rl-root / xfs defaults,usrquota,grpquota 0 0
-
-# Boot partition
-UUID=ae29afbf-e555-4e4f-8f72-9d203dc1b74c /boot xfs defaults 0 0
-
-cat /etc/fstab
-sudo systemctl daemon-reload
-sudo reboot
-mount | grep ' / '
-Press Esc, then type :wq to save and exit.
-
-
-   # Remount to apply
-   sudo mount -o remount /
-   
-   # Verify quota is enabled
-   mount | grep ' / '
-   # Should show: usrquota,grpquota
-   ```
-
-   sudo xfs_quota -x -c 'report -h' /
-
-3. **For ext4 filesystem (if applicable):**
-   ```bash
-   sudo vim /etc/fstab
-   # Add: usrquota,grpquota to options
-   
-   sudo mount -o remount /
-   sudo quotacheck -cug /
-   sudo quotaon -v /
-   ```
-
-4. **Test quota system:**
-   ```bash
-   sudo xfs_quota -x -c 'report -h' /
-   # Should run without errors
-   ```
-
-5. **Take another snapshot:** "Quotas Configured"
-
-Verify your current setup (to confirm XFS and no quotas enabled yet):
-textdf -T /
-mount | grep ' / '
-
-Expect xfs in the type column and noquota in the mount options.
-
-
-Install quota tools if not already present (provides additional utilities like repquota, though not strictly required for XFS):
-textsudo dnf install quota -y
-
-Edit /etc/fstab to add quota options (you've already done this, but double-check):
-textsudo vim /etc/fstab
-
-Find the line for your root filesystem (e.g., /dev/mapper/rl-root) and add usrquota,grpquota after defaults:
-text/dev/mapper/rl-root / xfs defaults,usrquota,grpquota 0 0
-
-Do not add quotas to /boot or other non-XFS partitions.
-Save and exit (:wq).
-Reload systemd (though not always necessary):
-textsudo systemctl daemon-reload
-
-
-
-Add quota flags to the kernel command line via GRUB (this is the key missing step for root filesystem):
-textsudo vim /etc/default/grub
-
-Find the GRUB_CMDLINE_LINUX line and append rootflags=usrquota,grpquota (or rootflags=uquota,gquota—either works). Example:
-textGRUB_CMDLINE_LINUX="crashkernel=auto resume=/dev/mapper/rl-swap rd.lvm.lv=rl/root rd.lvm.lv=rl/swap rhgb quiet rootflags=usrquota,grpquota"
-
-Save and exit.
-
-
-Regenerate GRUB config:
-textsudo grub2-mkconfig -o /boot/grub2/grub.cfg
-
-Update all kernels with the new flags:
-textsudo grubby --args="rootflags=usrquota,grpquota" --update-kernel=ALL
-
-Reboot the system:
-textsudo reboot
-
-Verify quotas are enabled after reboot:
-textmount | grep ' / '
-
-You should now see usrquota,grpquota (or uquota,gquota) in the options, without noquota.
-
-
-Test the quota system:
-textsudo xfs_quota -x -c 'report -h' /
-
-This should output a report of current usage (e.g., for users and groups) without errors. If it still fails, check the exact error message and share it for further troubleshooting.
-For a full report including blocks and inodes:
-textsudo xfs_quota -x -c 'report -ubih' /
-(Use -g instead of -u for group-specific report.)
-
----
-
-VM > Settings > Network > Adapter 1 Bridged adapter
-
-### **Step 4: Configure SSH for Key-Based Authentication**
-
-**On your host machine:**
-
-1. **Generate SSH key (if you don't have one):**
-   ```bash
-   ssh-keygen -t ed25519 -C "storage-provisioning-project"
-   # Press Enter to use default location
-   # Set a passphrase (optional but recommended)
-   ```
-
-2. **Copy key to VM:**
-   ```bash
-   ssh-copy-id admin@<VM-IP>
-   # Replace <VM-IP> with your VM's IP (from ip addr show)
-   # Example: ssh-copy-id admin@10.0.2.15
-   ```
-
-3. **Test passwordless login:**
-   ```bash
-   ssh admin@<VM-IP>
-   # Should log in without asking for password
-   ```
-
-4. **Configure SSH config file for easier access:**
-   ```bash
-   vim ~/.ssh/config
-   ```
-   Add:
-   ```
-   Host storage-vm
-       HostName <VM-IP>
-       User admin
-       IdentityFile ~/.ssh/id_ed25519
-   ```
-   
-   Now you can simply: `ssh storage-vm`
-ssh yeah@192.168.68.105
-
-Here's a **detailed step-by-step guide** for setting up SSH key-based authentication:
-
----
-
-## **Step 4: Configure SSH for Key-Based Authentication**
-
-### **Part 1: Get Your VM's IP Address**
-
-**On your VM (Rocky Linux):**
-
-```bash
-ip addr show
-```
-
-**Look for the IP address** in the output. It will be under `enp0s3` (or similar):
-
-```
-2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> ...
-    inet 10.0.2.15/24 ...
-```
-
-**Your VM IP is:** `10.0.2.15` (in this example)
-
-**Write this down** — you'll need it multiple times.
-
----
-
-### **Part 2: Generate SSH Key on Host Machine**
-
-**On your host machine (your main computer, NOT the VM):**
-
-Open a terminal and run:
-
-```bash
-ssh-keygen -t ed25519 -C "storage-provisioning-project"
-```
-
-**You'll see prompts like this:**
-
-```
-Generating public/private ed25519 key pair.
-Enter file in which to save the key (/home/yourname/.ssh/id_ed25519):
-```
-
-**Press Enter** to accept the default location.
-
-```
-Enter passphrase (empty for no passphrase):
-```
-
-**Two options:**
-- **Press Enter twice** for no passphrase (simpler, less secure)
-- **Type a passphrase** and press Enter, then type it again (more secure, recommended)
-
-**You'll see:**
-```
-Your identification has been saved in /home/yourname/.ssh/id_ed25519
-Your public key has been saved in /home/yourname/.ssh/id_ed25519.pub
-The key fingerprint is:
-SHA256:... storage-provisioning-project
-```
-
-**Key generated successfully!**
-
----
-
-### **Part 3: Copy Your Key to the VM**
-
-**Still on your host machine:**
-
-```bash
-ssh-copy-id yeah@10.0.2.15
-```
-
-**Replace:**
-- `yeah` with your VM username (the one you created during Rocky Linux installation)
-- `10.0.2.15` with your actual VM IP from Part 1
-
-**You'll see:**
-```
-/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s)...
-The authenticity of host '10.0.2.15 (10.0.2.15)' can't be established.
-ED25519 key fingerprint is SHA256:...
-Are you sure you want to continue connecting (yes/no/[fingerprint])?
-```
-
-**Type:** `yes` and press Enter
-
-```
-yeah@10.0.2.15's password:
-```
-
-**Type your VM user's password** and press Enter
-
-**You should see:**
-```
-Number of key(s) added: 1
-
-Now try logging into the machine, with:   "ssh 'yeah@10.0.2.15'"
-and check to make sure that only the key(s) you wanted were added.
-```
-
-**Key copied successfully!**
-
----
-
-### **Part 4: Test Passwordless Login**
-
-**On your host machine:**
-
-```bash
-ssh yeah@10.0.2.15
-```
-
-**What should happen:**
-- If you set a passphrase: It will ask for the **passphrase** (NOT the VM password)
-- If you didn't set a passphrase: You should be logged in **immediately** without any password prompt
-
-**You should see:**
-```
-[yeah@localhost ~]$
-```
-
-**You're now logged into the VM without typing the VM password!**
-
-**To exit the VM and return to your host:**
-```bash
-exit
-```
-
-Step 1: Copy your public key to the VM
-
-Since ssh-copy-id isn’t available on Windows by default, you can do it manually.
-
-On your Windows host, open your public key file:
-
-notepad C:\Users\theon\.ssh\id_ed25519.pub
-
-
-Copy the entire contents (it starts with ssh-ed25519 AAAA…).
-
-Step 2: Add the key to the VM
-
-SSH into the VM with your password (just this once):
-
-ssh yeah@192.168.68.105
-
-
-On the VM, create the .ssh folder in your home directory:
-
-mkdir -p ~/.ssh
-chmod 700 ~/.ssh
-
-
-Open (or create) authorized_keys:
-
-nano ~/.ssh/authorized_keys
-
-
-Paste the public key you copied from Windows.
-
-Save and exit (Ctrl+O, Enter, Ctrl+X in nano).
-
-Set correct permissions:
-
-chmod 600 ~/.ssh/authorized_keys
-
-Step 3: Test passwordless SSH
-
-Exit the VM:
-
-exit
-
-
-From your Windows host, SSH again:
-
-ssh yeah@192.168.68.105
-
-
-You should log in immediately, no password prompt.
-
-If you gave your key a passphrase, it will ask for the passphrase, not the VM password.
-
-Success: You now have passwordless SSH login.
-
-make sure its the full value
-ssh-ed25519 AAAAC3N... storage-provisioning-project
-
----
-
-### **Part 5: Create SSH Config for Easy Access**
-
-This lets you type `ssh storage-vm` instead of `ssh yeah@10.0.2.15` every time.
-
-**On your host machine:**
-
-1. **Open (or create) the SSH config file:**
-
-```bash
-nano ~/.ssh/config
-```
-
-(If `nano` isn't installed, use `vim` or any text editor)
-
-2. **Add these lines:**
-
-```
-Host storage-vm
-    HostName 10.0.2.15
-    User yeah
-    IdentityFile ~/.ssh/id_ed25519
-```
-
-**Replace:**
-- `10.0.2.15` with your VM's actual IP
-- `yeah` with your VM username
-
-3. **Save and exit:**
-   - In nano: Press `Ctrl+X`, then `Y`, then `Enter`
-   - In vim: Press `Esc`, type `:wq`, press `Enter`
-
-4. **Set correct permissions:**
-
-```bash
-chmod 600 ~/.ssh/config
-```
-
----
-
-### **Part 6: Test the Easy Connection**
-
-**On your host machine:**
-
-```bash
-ssh storage-vm
-```
-
-**You should be logged into the VM immediately!**
-
-```
-[yeah@localhost ~]$
-```
-
-**SSH is now fully configured!**
-
-### Adapting SSH Config for Windows Host
-
-The provided steps are for a Linux/macOS host (using `~` for home and commands like `nano`/`chmod`), but since your host is Windows (based on paths like `C:\Users\theon\.ssh`), we'll adjust them accordingly. Windows OpenSSH uses a similar config file at `C:\Users\yourusername\.ssh\config` (no file extension). You can edit it with Notepad or any text editor. No `chmod` is strictly needed on Windows, as file permissions are handled differently, but we'll ensure it's secure.
-
-**Prerequisites**: 
-- Your pubkey auth is working (from previous fixes—no password prompt when using `ssh -i C:\Users\theon\.ssh\id_ed25519 yeah@192.168.68.105`).
-- Use the current VM IP: From context, it's now 192.168.68.105 (not 10.0.2.15, which was the old NAT IP). If it's changed, confirm with `ip addr show` in the VM.
-
-#### Step 1: Create/Edit the SSH Config File on Windows Host
-1. Open Command Prompt or PowerShell as your user (theon).
-2. Create the .ssh folder if it doesn't exist:
-   ```
-   mkdir C:\Users\theon\.ssh
-   ```
-3. Open the config file in Notepad (creates it if missing):
-   ```
-   notepad C:\Users\theon\.ssh\config
-   ```
-   - If prompted "Cannot find the file. Do you want to create a new file?", click Yes.
-
-#### Step 2: Add the Configuration Lines
-In Notepad, paste this exact content (replace IP/user/key path if needed):
-
-```
-Host storage-vm
-    HostName 192.168.68.105
-    User yeah
-    IdentityFile C:\Users\theon\.ssh\id_ed25519
-```
-
-- **Explanations/Replacements**:
-  - `Host storage-vm`: Alias—you can now use `ssh storage-vm` instead of the full command.
-  - `HostName 192.168.68.105`: Your VM's IP (use 10.0.2.15 only if back on NAT; confirm with VM's `ip addr show`).
-  - `User yeah`: Your VM username.
-  - `IdentityFile C:\Users\theon\.ssh\id_ed25519`: Path to your private key (no .pub). Use forward slashes (/) or double backslashes (\\) if needed, but this should work.
-
-Save the file (File > Save) and close Notepad.
-
-#### Step 3: Secure the Config File (Optional but Recommended)
-Windows doesn't have `chmod`, but to restrict access:
-```
-icacls C:\Users\theon\.ssh\config.txt /inheritance:r /grant %USERNAME%:R
-```
-- This sets read-only for your user. If errors, skip—Windows SSH is lenient.
-
-#### Step 4: Test the Easy Connection
-From Command Prompt/PowerShell:
-```
-ssh storage-vm
-```
-- It should connect directly to the VM without password (or ask for key passphrase if set).
-- Expected: Logs you in, showing something like `[yeah@storage-server ~]$`.
-
-If it prompts for password: 
-- Check config syntax (no extra spaces/tabs; indent with 4 spaces under Host).
-- Verbose test: `ssh -v storage-vm`—look for "Offering public key" and acceptance.
-- If "Bad configuration option": Fix indents or path in config.
-
-Once working, you can use `ssh storage-vm` for quick access—great for scripting or frequent logins! If IP changes (e.g., DHCP), update the config.
- Automated Storage Provisioning Tool  ren C:\Users\theon\.ssh\config.txt config
- Automated Storage Provisioning Tool  icacls C:\Users\theon\.ssh\config /inheritance:r /grant theon:R
-processed file: C:\Users\theon\.ssh\config
-Successfully processed 1 files; Failed processing 0 files
- Automated Storage Provisioning Tool  ssh storage-vm
-Activate the web console with: systemctl enable --now cockpit.socket
-
-Last login: Wed Nov  5 20:28:26 2025 from 192.168.68.101
-[yeah@storage-server ~]$ 
 
 ---
 
@@ -1000,7 +410,7 @@ xfs_quota -x -c "report -h" /
 sudo -u testuser01 quota -s
 This will show how much of the 5G quota is used.
 
-4. Exit back to `yeah`:
+4. Exit back to `rocky-vm`:
 
 ```bash
 exit
@@ -1027,17 +437,17 @@ sudo ./deprovision_user.sh testuser01 --backup
 # Verify backup was created
 ls -lh /var/backups/deprovisioned_users/
 # Should see testuser01_TIMESTAMP.tar.gz
-[yeah@storage-server scripts]$ ls -ld /var/backups/deprovisioned_users
+[rocky-vm@storage-server scripts]$ ls -ld /var/backups/deprovisioned_users
 drwx------. 2 root root 93 Nov  5 22:18 /var/backups/deprovisioned_users
-[yeah@storage-server scripts]$ sudo ls -lh /var/backups/deprovisioned_users/
+[rocky-vm@storage-server scripts]$ sudo ls -lh /var/backups/deprovisioned_users/
 total 108K
 -rw-r--r--. 1 root root 101K Nov  5 22:18 testuser01_20251105_221839.tar.gz
 -rw-------. 1 root root  250 Nov  5 22:18 testuser01_20251105_221839.tar.gz.meta
-[yeah@storage-server scripts]$ sudo ls -lh /var/backups/deprovisioned_users/
+[rocky-vm@storage-server scripts]$ sudo ls -lh /var/backups/deprovisioned_users/
 total 108K
 -rw-r--r--. 1 root root 101K Nov  5 22:18 testuser01_20251105_221839.tar.gz
 -rw-------. 1 root root  250 Nov  5 22:18 testuser01_20251105_221839.tar.gz.meta
-[yeah@storage-server scripts]$ sudo tree /var/backups/deprovisioned_users/
+[rocky-vm@storage-server scripts]$ sudo tree /var/backups/deprovisioned_users/
 /var/backups/deprovisioned_users/
 ├── testuser01_20251105_221839.tar.gz
 └── testuser01_20251105_221839.tar.gz.meta
@@ -1049,7 +459,7 @@ cat /var/backups/deprovisioned_users/testuser01_*.meta
 # Verify user is gone
 id testuser01  # Should fail with "no such user"
 ls /home/storage_users/testuser01  # Should not exist
-[yeah@storage-server scripts]$ sudo cat /var/backups/deprovisioned_users/testuser01_20251105_221839.tar.gz.meta
+[rocky-vm@storage-server scripts]$ sudo cat /var/backups/deprovisioned_users/testuser01_20251105_221839.tar.gz.meta
 Username: testuser01
 UID: 1002
 GID: 1002
@@ -1060,9 +470,9 @@ Backup Date: Wed Nov  5 10:18:40 PM CET 2025
 Backup Size: 101K
 Retention: 30 days
 Expires: Fri Dec  5 10:18:40 PM CET 2025
-[yeah@storage-server scripts]$
+[rocky-vm@storage-server scripts]$
 ```
-[yeah@storage-server scripts]$ sudo ./deprovision_user.sh testuser01 --backup
+[rocky-vm@storage-server scripts]$ sudo ./deprovision_user.sh testuser01 --backup
 [INFO] Running pre-flight checks...
 [WARN] =========================================
 [WARN] DEPROVISIONING USER: testuser01
@@ -1135,7 +545,7 @@ To restore from backup:
   sudo tar -xzf /var/backups/deprovisioned_users/testuser01_20251105_221839.tar.gz -C /
 
 [INFO] Deprovisioning completed at Wed Nov  5 10:18:41 PM CET 2025
-[yeah@storage-server scripts]$
+[rocky-vm@storage-server scripts]$
 
 
 ### **8. Test Force Deprovision (No Prompt)**
@@ -1234,7 +644,7 @@ Try these steps and let me know what happens! Which step should I help you with 
 
 
 
-[yeah@storage-server scripts]$ sudo ./provision_user.sh testuser01 -q 5G
+[rocky-vm@storage-server scripts]$ sudo ./provision_user.sh testuser01 -q 5G
 [INFO] Running pre-flight checks...
 [INFO] Checking quota support on / (filesystem: xfs)
 [INFO] =========================================
@@ -1296,10 +706,10 @@ To check quota usage:
   sudo xfs_quota -x -c "report -h" /
 
 To deprovision user:
-  /home/yeah/storage-provisioning/scripts/deprovision_user.sh testuser01
+  /home/rocky-vm/storage-provisioning/scripts/deprovision_user.sh testuser01
 
 [INFO] Provisioning completed at Wed Nov  5 10:10:49 PM CET 2025
-[yeah@storage-server scripts]$
+[rocky-vm@storage-server scripts]$
 
 
 
