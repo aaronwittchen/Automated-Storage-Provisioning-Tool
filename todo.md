@@ -72,7 +72,7 @@ done
 rsync -avz --delete "${EXCLUDE_ARGS[@]}" "$LOCAL_DIR/" "$REMOTE_TARGET"
 
 if [[ $? -eq 0 ]]; then
-  echo "✅ Sync completed successfully!"
+  echo "Sync completed successfully!"
 else
   echo "⚠️  Sync encountered errors."
 fi
@@ -276,7 +276,7 @@ fi
 
 # === Final status ===
 if [[ $? -eq 0 ]]; then
-  echo -e "${GREEN}✅ Sync completed successfully.${NC}"
+  echo -e "${GREEN}Sync completed successfully.${NC}"
   log_msg "Sync ($MODE) completed successfully."
 else
   echo -e "${RED}⚠️  Sync encountered errors.${NC}"
@@ -370,10 +370,10 @@ sync_vm push
 
 ### 🧭 Summary
 
-✅ Works for **everyone** — no hardcoded paths
-✅ Supports **push** and **pull**
-✅ Built-in **excludes**, logging, and confirmation
-✅ Configurable via arguments or environment variables
+Works for **everyone** — no hardcoded paths
+Supports **push** and **pull**
+Built-in **excludes**, logging, and confirmation
+Configurable via arguments or environment variables
 
 ---
 
@@ -419,7 +419,7 @@ The **host acts as a gateway**, performing NAT between the VM and the outside ne
   ssh -p 2222 user@127.0.0.1
   ```
 
-✅ **Pros:**
+**Pros:**
 
 * Very easy setup (works “out of the box”)
 * Good isolation and security
@@ -460,7 +460,7 @@ The VM gets an IP address **from your network’s router (DHCP)** — same subne
   ssh user@192.168.1.105
   ```
 
-✅ **Pros:**
+**Pros:**
 
 * Full network visibility — acts like a real machine
 * Easy to SSH or access from any other device on LAN
@@ -478,8 +478,8 @@ The VM gets an IP address **from your network’s router (DHCP)** — same subne
 
 | Feature            | NAT                   | Bridged Adapter                     |
 | ------------------ | --------------------- | ----------------------------------- |
-| VM visible on LAN? | ❌ No                  | ✅ Yes                               |
-| Internet access    | ✅ Yes                 | ✅ Yes                               |
+| VM visible on LAN? | ❌ No                  | Yes                               |
+| Internet access    | Yes                 | Yes                               |
 | SSH from host      | Needs port forwarding | Direct connection                   |
 | Isolation          | High                  | Low                                 |
 | Setup complexity   | Easy                  | Moderate                            |

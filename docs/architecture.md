@@ -26,7 +26,7 @@ graph TB
         Repo --> Tests
     end
     
-    Host -->|rsync/SCP| Deploy["Deploy"]
+    Host -->|rsync/SCP| Deploy
     
     subgraph VM["Rocky Linux VM"]
         direction TB
@@ -116,14 +116,6 @@ graph TB
     style L4 stroke:#43a047,stroke-width:2px,fill:none,color:#43a047
 ```
 
-## Data Flow Diagrams
-
-### User Provisioning Sequence Chart
-
-### User Deprovisioning Sequence Chart
-
----
-
 ## Data Flow: Provisioning User
 
 ```mermaid
@@ -136,21 +128,21 @@ sequenceDiagram
 
     Admin->>Script: ./provision_user.sh alice -q 10G
     
-    rect rgb(255,255,255,0.1),stroke:#1e88e5,stroke-width:2px
+    rect rgb(255,255,255,0.1),stroke:#1e88e5,stroke-width:2px,dashed
     Note over Script: Validation Phase
     Script->>Script: Validate username format
     Script->>Script: Validate quota format
     Script->>System: Check if user exists
     end
     
-    rect rgb(255,255,255,0.1),stroke:#43a047,stroke-width:2px
+    rect rgb(255,255,255,0.1),stroke:#43a047,stroke-width:2px,dashed
     Note over Script: User Creation Phase
     Script->>System: useradd alice
     Script->>System: groupadd storage_users
     Script->>System: Generate temp password
     end
     
-    rect rgb(255,255,255,0.1),stroke:#ffc107,stroke-width:2px
+    rect rgb(255,255,255,0.1),stroke:#ffc107,stroke-width:2px,dashed
     Note over Script: Directory Setup Phase
     Script->>FS: mkdir /home/storage_users/alice
     Script->>FS: chown alice:storage_users
@@ -158,13 +150,13 @@ sequenceDiagram
     Script->>FS: Create subdirs (data,backups,temp,logs)
     end
     
-    rect rgb(255,255,255,0.1),stroke:#f44336,stroke-width:2px
+    rect rgb(255,255,255,0.1),stroke:#f44336,stroke-width:2px,dashed
     Note over Script: Quota Enforcement Phase
     Script->>System: xfs_quota set 10G limit
     Script->>System: xfs_quota verify
     end
     
-    rect rgb(255,255,255,0.1),stroke:#9c27b0,stroke-width:2px
+    rect rgb(255,255,255,0.1),stroke:#9c27b0,stroke-width:2px,dashed
     Note over Script: Access Control Phase
     Script->>System: SSH access: DENY
     Script->>System: Add SELinux context
@@ -206,7 +198,7 @@ sequenceDiagram
     Script->>Log: [INFO] Backup created
     end
     
-    rect rgb(255,255,255,0.1),stroke:#3f51b5,stroke-width:2px
+    rect rgb(255,255,255,0.1),stroke:#3f51b5,stroke-width:2px,dashed
     Note over Script: Account Termination Phase
     Script->>System: passwd -l alice (lock account)
     Script->>System: pkill -u alice (kill processes)
@@ -214,7 +206,7 @@ sequenceDiagram
     Script->>System: xfs_quota remove limits
     end
     
-    rect rgb(255,255,255,0.1),stroke:#e91e63,stroke-width:2px
+    rect rgb(255,255,255,0.1),stroke:#e91e63,stroke-width:2px,dashed
     Note over Script: Cleanup Phase
     Script->>System: userdel -r alice
     Script->>FS: rm -rf /home/storage_users/alice
@@ -348,13 +340,13 @@ graph LR
     D --> E["Apply Quota"]
     E --> F["Configure Access"]
     F --> G["Log & Report"]
-    G --> H["✅ alice provisioned"]
+    G --> H["alice provisioned"]
     
-    style A fill:#e1f5ff
-    style H fill:#c8e6c9
-    style B fill:#fff9c4
-    style C fill:#ffe0b2
-    style E fill:#f8bbd0
+    style A stroke:#1e88e5,stroke-width:2px,fill:none
+    style H stroke:#43a047,stroke-width:2px,fill:none
+    style B stroke:#ffc107,stroke-width:2px,fill:none
+    style C stroke:#ff9800,stroke-width:2px,fill:none
+    style E stroke:#f44336,stroke-width:2px,fill:none
 ```
 
 ### Workflow 2: Batch Provisioning
@@ -363,14 +355,14 @@ graph LR
 graph TD
     A["Create users.txt<br/>alice<br/>bob<br/>charlie"] --> B["for each user in file"]
     B --> C["provision_user.sh"]
-    C --> D1["✅ alice: 5GB quota"]
-    C --> D2["✅ bob: 5GB quota"]
-    C --> D3["✅ charlie: 5GB quota"]
+    C --> D1["alice: 5GB quota"]
+    C --> D2["bob: 5GB quota"]
+    C --> D3["charlie: 5GB quota"]
     
-    style A fill:#e1f5ff
-    style D1 fill:#c8e6c9
-    style D2 fill:#c8e6c9
-    style D3 fill:#c8e6c9
+    style A stroke:#1e88e5,stroke-width:2px,fill:none
+    style D1 stroke:#43a047,stroke-width:2px,fill:none
+    style D2 stroke:#43a047,stroke-width:2px,fill:none
+    style D3 stroke:#43a047,stroke-width:2px,fill:none
 ```
 
 ### Workflow 3: Safe Deprovisioning
@@ -384,12 +376,12 @@ graph LR
     E --> F["Lock Account"]
     F --> G["Kill Processes"]
     G --> H["Delete User"]
-    H --> I["✅ Deprovisioned<br/>Backup saved: 30 days"]
+    H --> I["Deprovisioned<br/>Backup saved: 30 days"]
     
-    style A fill:#ffccbc
-    style B fill:#fff9c4
-    style I fill:#c8e6c9
-    style D fill:#ffcdd2
+    style A stroke:#f44336,stroke-width:2px,fill:none
+    style B stroke:#ffc107,stroke-width:2px,fill:none
+    style I stroke:#43a047,stroke-width:2px,fill:none
+    style D stroke:#f44336,stroke-width:2px,fill:none
 ```
 
 ---
@@ -416,12 +408,12 @@ Operation latency             Log file        Parse timestamps
 ./scripts/health_check.sh
 
 Output:
-  ✅ Quotas enabled
-  ✅ Storage directory writable
-  ✅ Log directory writable
-  ✅ Puppet installed
-  ✅ No pending backup deletions
-  ⚠️  2 users over soft quota limit
+  Quotas enabled
+  Storage directory writable
+  Log directory writable
+  Puppet installed
+  No pending backup deletions
+  2 users over soft quota limit
 ```
 
 ---
@@ -518,3 +510,143 @@ If provisioning fails:
      - Investigate root cause
      - Retry with fixes
 ```
+
+## Terminology & Concepts
+
+### Core Technologies
+
+**XFS (X File System)**
+
+Modern, high-performance filesystem used by Rocky Linux. Supports project-based and user-based quotas natively. Handles large files and concurrent I/O efficiently. Industry standard for enterprise Linux systems. Preferred over ext4 for this project due to superior quota and scaling capabilities.
+
+**Puppet**
+
+Infrastructure-as-Code (IaC) automation tool that manages system configuration. Administrators declare desired system state in manifests (Ruby DSL files). Idempotent: applying the same manifest multiple times produces the same result, making it safe to re-run. Primary use in this project: ensuring consistent configuration across systems. Example: define that user "alice" should exist with specific permissions and quota.
+
+**Bash**
+
+Standard Linux shell scripting language used for direct provisioning operations and quick administrative tasks. Advantages: no external dependencies, runs on all Linux systems. In this project: handles immediate user creation, quota setting, and deprovisioning tasks. Complements Puppet for ad-hoc operations.
+
+**SSH (Secure Shell)**
+
+Remote access protocol providing encrypted communication (secure alternative to telnet). SFTP is SSH File Transfer Protocol for secure file transfers. SSH Keys provide cryptographic authentication (more secure than passwords). Chroot is a security feature that restricts users to specific directories.
+
+**Rocky Linux / RHEL**
+
+Rocky Linux is a free, community-maintained Linux distribution compatible with Red Hat Enterprise Linux (RHEL). RHEL is the industry standard for enterprise servers. Rocky provides stability, predictable updates, and long-term support with a large ecosystem of tools and documentation.
+
+**Sudo**
+
+Command allowing regular users to execute commands with root (administrator) privileges. Requires password confirmation. Essential for provisioning scripts that need elevated permissions without logging in as root directly. Provides audit trail of who ran what command.
+
+### Storage & Quota Concepts
+
+**Quota (Disk Quota)**
+
+Limit on how much disk space a user or group can consume. Soft limit is a warning threshold that users can temporarily exceed. Hard limit is absolute - users cannot exceed this limit under any circumstances. Quotas prevent single users from filling entire storage systems and ensure fair resource distribution.
+
+**Inode**
+
+Index node - filesystem structure storing file metadata (name, permissions, size, ownership, timestamps). Each file or directory consumes at least one inode. Systems have both disk space limits and inode limits. A user can hit inode limit (too many files) even with free disk space available.
+
+**Filesystem**
+
+Hierarchical structure organizing files and directories on disk. Examples: XFS, ext4, BTRFS. Each filesystem has different features (quotas, snapshots, compression). Mount point is the directory where filesystem is attached to the system (example: /storage mounted at /dev/sda1).
+
+**SELinux (Security-Enhanced Linux)**
+
+Mandatory access control system adding additional security layers beyond standard Unix permissions. Assigns security contexts to files and processes. Can enforce policies preventing certain operations even if Unix permissions allow them. Used in this project to restrict storage user directories.
+
+### User & Group Management
+
+**User Account**
+
+Individual login credential representing a person or service. Associated with UID (unique numeric identifier). Has home directory, shell, group membership, and security context. In this project: created per storage user with automatic home directory provisioning.
+
+**Group**
+
+Collection of users sharing common permissions and attributes. All storage users belong to "storage_users" group. Simplifies permission management - can assign permissions to entire groups instead of individuals. Associated with GID (unique numeric identifier).
+
+**Home Directory**
+
+Primary directory for user files and configuration. In this project: /home/storage_users/{username}/. User owns home directory with 700 permissions (drwx------) - only owner can access. Contains subdirectories: data/, backups/, temp/, logs/.
+
+**PAM (Pluggable Authentication Modules)**
+
+System for authenticating users on Linux. Handles password checking, account lockouts, session management. Can enforce policies like password expiration or login hour restrictions. Works with useradd/userdel commands to validate user creation.
+
+### Access Control & Security
+
+**Authentication**
+
+Verifying user identity. Methods used in this project: passwords (temporary, must change), SSH keys (cryptographic), Puppet authentication (certificate-based). Different from authorization (what user can do).
+
+**Authorization**
+
+Determining what actions authenticated user can perform. In this project: users can only access their own /home/storage_users/{username}/ directory. Admins can provision/deprovision users and modify quotas. System enforces quotas preventing disk exhaustion.
+
+**Chroot (Change Root)**
+
+Security technique restricting user to specific directory tree. User cannot access files outside chroot directory. Common use: SFTP-only users confined to /home/storage_users/{username}/. Example configuration in sshd_config: ChrootDirectory /storage/%u.
+
+**SSH Key**
+
+Cryptographic key pair (public + private) for authentication. Public key stored on server in .ssh/authorized_keys. Private key kept secure on client machine. More secure than passwords: resistant to brute force attacks, no password transmitted over network.
+
+### Automation & Operations
+
+**Idempotent**
+
+Property where running operation multiple times produces same result as running once. Puppet manifests are idempotent: applying manifest 10 times = applying manifest 1 time. Safer for automation - can re-run without unintended side effects. Bash scripts should be designed to be idempotent when possible.
+
+**Provisioning**
+
+Process of creating and configuring resources. In this project: provisioning = creating user account + directory + quota + access controls in single operation. Orchestrated by provision_user.sh script or Puppet manifests.
+
+**Deprovisioning**
+
+Process of removing resources cleanly. In this project: deprovisioning = archiving user data + locking account + deleting user + cleaning up configurations. Opposite of provisioning. Includes backup creation for compliance and recovery purposes.
+
+**Audit Trail**
+
+Record of all system changes and user actions. In this project: all provisioning events logged to /var/log/storage-provisioning/provisioning.log with timestamps and severity levels. Enables troubleshooting, compliance verification, and security investigations.
+
+**Cron Job**
+
+Scheduled task running at specified times. Syntax: "minute hour day month day-of-week command". Common use: daily quota reports, cleanup tasks, backups. In this project: can schedule daily repquota reports to monitor usage.
+
+**Manifest (Puppet)**
+
+Ruby DSL file defining desired system state. Contains resource declarations (users, files, services, etc). File extension: .pp. Example: manifests/user.pp defines how storage users should be created. Applied using "puppet apply" command.
+
+### Monitoring & Logging
+
+**Log File**
+
+Text file recording system events with timestamps. In this project: /var/log/storage-provisioning/provisioning.log records all provisioning operations. Format: [TIMESTAMP] [LEVEL] message. Levels: INFO (normal operation), ERROR (problems), WARNING (potential issues).
+
+**Repquota**
+
+Command-line tool reporting disk quota usage for all users. Shows: username, disk usage, soft limit, hard limit, grace period. Output example shows which users are near or over quota. Used for monitoring and capacity planning.
+
+**Syslog / Journald**
+
+Central logging system collecting messages from all system services. Syslog is traditional logging daemon. Journald is modern systemd-based logging. Both can receive log messages from custom applications via /dev/log socket.
+
+**Metrics**
+
+Quantitative measurements of system performance and activity. Examples: users provisioned, quota utilization, error rate, operation latency. Tracked over time to identify trends and issues. Can be fed to monitoring systems like Prometheus or Grafana.
+
+### Backup & Recovery
+
+**Backup**
+
+Copy of user data for disaster recovery. In this project: created before deprovisioning user account. Format: tar.gz (compressed archive). Stored in /var/backups/deprovisioned_users/ with 30-day retention policy. Metadata file (.meta) records: username, UID, backup date, restore command.
+
+**Snapshot**
+
+Point-in-time copy of filesystem state. Different from backup: snapshot stored on same system, faster restore, but lost if primary storage fails. Future enhancement: Ceph or btrfs snapshots for faster recovery. Current project uses tar-based backups.
+
+**Retention Policy**
+
+Rules determining how long backups are kept. In this project: 30-day retention for deprovisioned user backups. After expiration, backups auto-deleted to save space. Balances compliance requirements (keep data) with storage costs (don't keep forever).

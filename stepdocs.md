@@ -337,7 +337,7 @@ The key fingerprint is:
 SHA256:... storage-provisioning-project
 ```
 
-✅ **Key generated successfully!**
+**Key generated successfully!**
 
 ---
 
@@ -377,7 +377,7 @@ Now try logging into the machine, with:   "ssh 'yeah@10.0.2.15'"
 and check to make sure that only the key(s) you wanted were added.
 ```
 
-✅ **Key copied successfully!**
+**Key copied successfully!**
 
 ---
 
@@ -398,7 +398,7 @@ ssh yeah@10.0.2.15
 [yeah@localhost ~]$
 ```
 
-✅ **You're now logged into the VM without typing the VM password!**
+**You're now logged into the VM without typing the VM password!**
 
 **To exit the VM and return to your host:**
 ```bash
@@ -458,7 +458,7 @@ You should log in immediately, no password prompt.
 
 If you gave your key a passphrase, it will ask for the passphrase, not the VM password.
 
-✅ Success: You now have passwordless SSH login.
+Success: You now have passwordless SSH login.
 
 make sure its the full value
 ssh-ed25519 AAAAC3N... storage-provisioning-project
@@ -518,7 +518,7 @@ ssh storage-vm
 [yeah@localhost ~]$
 ```
 
-✅ **SSH is now fully configured!**
+**SSH is now fully configured!**
 
 ### Adapting SSH Config for Windows Host
 
@@ -578,7 +578,7 @@ If it prompts for password:
 - Verbose test: `ssh -v storage-vm`—look for "Offering public key" and acceptance.
 - If "Bad configuration option": Fix indents or path in config.
 
-✅ Once working, you can use `ssh storage-vm` for quick access—great for scripting or frequent logins! If IP changes (e.g., DHCP), update the config.
+Once working, you can use `ssh storage-vm` for quick access—great for scripting or frequent logins! If IP changes (e.g., DHCP), update the config.
  Automated Storage Provisioning Tool  ren C:\Users\theon\.ssh\config.txt config
  Automated Storage Provisioning Tool  icacls C:\Users\theon\.ssh\config /inheritance:r /grant theon:R
 processed file: C:\Users\theon\.ssh\config
@@ -826,7 +826,7 @@ log "INFO" "Set quota $QUOTA for $USERNAME"
 sudo -u "$USERNAME" mkdir -p "$STORAGE_BASE/$USERNAME"/{data,backups,temp}
 log "INFO" "Created subdirectories for $USERNAME"
 
-echo "✅ User $USERNAME provisioned successfully"
+echo "User $USERNAME provisioned successfully"
 echo "   Directory: $STORAGE_BASE/$USERNAME"
 echo "   Quota: $QUOTA"
 echo "   Temporary password: ChangeMe123!"
@@ -872,7 +872,7 @@ log "INFO" "Killed processes for $USERNAME"
 sudo userdel -r "$USERNAME"
 log "INFO" "Deleted user $USERNAME and home directory"
 
-echo "✅ User $USERNAME deprovisioned successfully"
+echo "User $USERNAME deprovisioned successfully"
 ```
 
 Perfect! Here's your complete testing workflow:
@@ -1194,7 +1194,7 @@ cd ~/storage-provisioning/scripts
 
 # 1. Provision
 sudo ./provision_user.sh alice -q 10G
-# ✅ Note the password
+# Note the password
 
 # 2. Verify
 id alice
@@ -1206,7 +1206,7 @@ sudo -u alice bash -c 'echo "Hello" > /home/storage_users/alice/data/file.txt'
 
 # 4. Deprovision with backup
 sudo ./deprovision_user.sh alice --backup
-# ✅ Type 'yes'
+# Type 'yes'
 
 # 5. Verify cleanup
 id alice  # Should fail
@@ -1215,7 +1215,7 @@ ls /var/backups/deprovisioned_users/  # Should see backup
 
 ## 🎯 What to Look For
 
-**✅ Success indicators:**
+**Success indicators:**
 - Green `[INFO]` messages
 - No red `[ERROR]` messages
 - User created successfully

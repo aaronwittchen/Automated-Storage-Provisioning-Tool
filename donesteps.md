@@ -15,7 +15,7 @@ cd ~/storage-provisioning/scripts
 
 # 1. Provision
 sudo ./provision_user.sh alice -q 10G
-# ✅ Note the password
+# Note the password
 
 # 2. Verify
 id alice
@@ -27,7 +27,7 @@ sudo -u alice bash -c 'echo "Hello" > /home/storage_users/alice/data/file.txt'
 
 # 4. Deprovision with backup
 sudo ./deprovision_user.sh alice --backup
-# ✅ Type 'yes'
+# Type 'yes'
 
 # 5. Verify cleanup
 id alice  # Should fail

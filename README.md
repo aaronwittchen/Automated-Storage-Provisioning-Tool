@@ -47,13 +47,13 @@ That's it! A new user is created with a managed storage directory and 2GB quota.
 
 ## Features
 
-✅ **Automated User Provisioning** — Create users with one command  
-✅ **Disk Quotas** — Enforce soft/hard limits automatically  
-✅ **Access Control** — SSH/SFTP with chroot isolation (optional)  
-✅ **Batch Operations** — Provision multiple users from a file  
-✅ **Safe Deprovisioning** — Clean removal with backup options  
-✅ **Puppet Integration** — Infrastructure-as-Code configuration management  
-✅ **Monitoring** — Track usage and quota violations  
+**Automated User Provisioning** — Create users with one command  
+**Disk Quotas** — Enforce soft/hard limits automatically  
+**Access Control** — SSH/SFTP with chroot isolation (optional)  
+**Batch Operations** — Provision multiple users from a file  
+**Safe Deprovisioning** — Clean removal with backup options  
+**Puppet Integration** — Infrastructure-as-Code configuration management  
+**Monitoring** — Track usage and quota violations  
 
 ---
 
@@ -158,7 +158,7 @@ sequenceDiagram
     Script->>System: Create /storage/alice
     Script->>System: Set quota 2GB
     Script->>System: Configure access
-    Script->>Admin: ✅ Success + Temp Password
+    Script->>Admin: Success + Temp Password
 ```
 
 ### Provision Multiple Users
@@ -207,14 +207,14 @@ Removes:
 
 ```mermaid
 graph LR
-    A["deprovision_user.sh alice"] --> B["⚠️ Warning"]
+    A["deprovision_user.sh alice"] --> B["Warning"]
     B --> C{Confirm?}
-    C -->|No| D["❌ Abort"]
-    C -->|Yes| E["📦 Create Backup"]
-    E --> F["🔒 Lock Account"]
-    F --> G["⚡ Kill Processes"]
-    G --> H["🗑️ Delete User"]
-    H --> I["✅ Deprovisioned<br/>Backup: 30 days"]
+    C -->|No| D["Abort"]
+    C -->|Yes| E["Create Backup"]
+    E --> F["Lock Account"]
+    F --> G["Kill Processes"]
+    G --> H["Delete User"]
+    H --> I["Deprovisioned<br/>Backup: 30 days"]
     
     style I fill:#c8e6c9
     style D fill:#ffcdd2
@@ -458,12 +458,12 @@ getent passwd testuser  # Should fail (user deleted)
 ```mermaid
 graph TD
     A["Start Testing"] --> B["Provision testuser"]
-    B --> C["✅ Verify user exists"]
+    B --> C["Verify user exists"]
     C --> D["Create test data"]
-    D --> E["✅ Check quota limit"]
+    D --> E["Check quota limit"]
     E --> F["Deprovision testuser"]
-    F --> G["✅ Verify deletion"]
-    G --> H["✅ All tests passed"]
+    F --> G["Verify deletion"]
+    G --> H["All tests passed"]
     
     style H fill:#c8e6c9
     style B fill:#fff9c4
