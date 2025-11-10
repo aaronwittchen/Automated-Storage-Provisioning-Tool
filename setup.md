@@ -27,16 +27,129 @@ Last login: Mon Nov 10 16:26:39 2025
 [rocky-vm@storage-unit ~]$
 ```
 
-### Using WSL
+---
 
-Set up personal configuration (one-time):
+## Set Up File Transfer Method
+
+The `sync_vm.sh` script automates bidirectional file synchronization between your host machine and the VM using `rsync` over SSH. This is essential for development and testing workflows.
+
+### Prerequisites
+
+Ensure you have:
+- `rsync` installed on both your host and VM
+- SSH key-based authentication configured (see Step 3)
+- The `sync_vm.sh` script in your project directory
+
+### Initial Configuration
+
+Generate a personal config file (one-time setup):
 
 ```bash
-./sync_vm.sh --setup-config  # Creates ~/.sync_vm.conf
-./sync_vm.sh push
-./sync_vm.sh pull
-./sync_vm.sh push /custom/local rocky-vm@192.168.68.105:/custom/path
+./sync_vm.sh --setup-config
 ```
+
+This creates `~/.sync_vm.conf` with default paths. Edit it to match your setup:
+
+```bash
+nano ~/.sync_vm.conf
+```
+
+The config file contains:
+
+```
+# Default local project directory
+LOCAL_DIR="$(pwd)"
+
+# Default remote VM target (user@host:/path)
+REMOTE_TARGET="rocky-vm@192.168.68.105:/home/rocky-vm/storage-provisioning/"
+```
+
+Update these paths if your local project or remote target directories differ.
+
+### Basic Usage
+
+#### Push Local Files to VM
+
+Synchronize your local project to the VM:
+
+```bash
+./sync_vm.sh push
+```
+
+This uses defaults from `~/.sync_vm.conf`. For a one-time override:
+
+```bash
+./sync_vm.sh push /path/to/local rocky-vm@192.168.68.105:/remote/path
+```
+
+#### Pull Files from VM to Local
+
+Synchronize files from the VM back to your local machine:
+
+```bash
+./sync_vm.sh pull
+```
+
+Or with custom paths:
+
+```bash
+./sync_vm.sh pull /path/to/local rocky-vm@192.168.68.105:/remote/path
+```
+
+### Excluded Files and Directories
+
+The script automatically excludes the following from sync to avoid syncing unnecessary files:
+
+- `.git` — Version control directory
+- `logs` — Log files
+- `*.tmp` — Temporary files
+- `*.bak` — Backup files
+- `__pycache__` — Python cache directory
+
+To modify excluded items, edit the `EXCLUDES` array in `sync_vm.sh`.
+
+### How It Works
+
+The script uses `rsync` with the following features:
+
+- **Two-way sync**: Push changes to VM or pull changes back to your host
+- **Incremental**: Only transfers changed files
+- **Delete flag**: `--delete` removes files on destination that don't exist on source
+- **Logging**: All sync operations are logged to `sync.log`
+- **Color output**: Status messages use color for readability
+
+Before each sync, the script displays a summary and asks for confirmation:
+
+```
+-------------------------------------------
+ Automated Storage Provisioning Tool Sync
+-------------------------------------------
+Mode  : push
+Local : /path/to/project
+Remote: rocky-vm@192.168.68.105:/home/rocky-vm/storage-provisioning/
+Config: /home/user/.sync_vm.conf
+
+Proceed with sync? (y/n):
+```
+
+Type `y` to confirm or `n` to abort.
+
+### Troubleshooting
+
+**"rsync not found"**: Install rsync on your host and VM:
+
+```bash
+# Host (Linux/macOS)
+brew install rsync  # macOS
+sudo apt-get install rsync  # Ubuntu/Debian
+
+# VM
+sudo dnf install rsync
+```
+
+**Permission denied**: Ensure SSH key-based authentication is working and the remote path exists on the VM.
+
+**Nothing syncing**: Check that files have actually changed. The script only transfers modified files.
 
 ---
 
@@ -456,3 +569,199 @@ If it prompts for a password, check:
 - SSH config syntax (proper indentation with 4 spaces under Host)
 - File path to private key is correct
 - For verbose troubleshooting: `ssh -v storage-vm`
+
+---
+
+## Step 4: Deploy and Test Provisioning Scripts
+
+### Pre-flight Check
+
+Before running the provisioning scripts, verify that quotas are enabled on your filesystem:
+
+```bash
+mount | grep ' / '
+```
+
+If you see `usrquota` or `uquota` in the output, quotas are enabled and you can proceed. If not, refer back to Step 2: Configure Disk Quotas.
+
+### Sync Scripts to VM
+
+Use `sync_vm.sh` to copy your project files to the VM:
+
+```bash
+./sync_vm.sh push
+```
+
+Confirm the sync and wait for completion.
+
+### Fix Line Endings
+
+Scripts synced from Windows to Linux may have Windows line endings (CRLF). Convert all scripts in the VM:
+
+```bash
+cd ~/storage-provisioning/scripts/
+for file in *.sh; do sed -i 's/\r$//' "$file"; done
+```
+
+This ensures the scripts run properly on Linux.
+
+### Test the Provisioning Script
+
+Verify the script is working by displaying the help information:
+
+```bash
+sudo ./provision_user.sh --help
+```
+
+Expected output:
+
+```
+Usage: ./provision_user.sh <username> [options]
+
+Provision a new storage user with quota and directory structure.
+
+Arguments:
+    username            Username for the new storage user (required)
+
+Options:
+    -q, --quota SIZE    Disk quota (default: 10G)
+                        Examples: 5G, 500M, 1T
+    -g, --group NAME    Primary group (default: storage_users)
+    --allow-ssh         Allow SSH access (default: deny)
+    --no-subdirs        Skip creating default subdirectories
+    -h, --help          Show this help message
+
+Examples:
+    ./provision_user.sh john_doe
+    ./provision_user.sh jane_smith -q 50G
+    ./provision_user.sh admin_user -q 100G --allow-ssh
+```
+
+### Create a Test User
+
+Create a test user with a 5GB quota to verify the provisioning process:
+
+```bash
+sudo ./provision_user.sh testuser01 -q 5G
+```
+
+For detailed information about the provisioning script, its options, and complete output examples, see [provision_user.md](./provision_user.md).
+
+The script will run through several steps and display a success summary with the temporary password.
+
+### Verify User Creation
+
+Confirm the test user was created successfully:
+
+```bash
+# Check user exists
+id testuser01
+```
+
+Expected output:
+
+```
+uid=1002(testuser01) gid=1002(storage_users) groups=1002(storage_users)
+```
+
+Check the home directory and subdirectories:
+
+```bash
+ls -la /home/storage_users/testuser01/
+```
+
+Expected output should include:
+
+```
+data/
+backups/
+temp/
+logs/
+README.txt
+```
+
+Check that the quota was applied:
+
+```bash
+sudo xfs_quota -x -c "report -h" /
+```
+
+You should see `testuser01` listed with a 5G hard limit.
+
+### Test User Login (Optional)
+
+Switch to the test user to verify permissions and quota enforcement:
+
+```bash
+sudo su - testuser01
+```
+
+You will be prompted to change the temporary password. Enter the password displayed during provisioning, then set a new password.
+
+Once logged in, verify the environment:
+
+```bash
+# Check current directory
+pwd
+
+# List files
+ls -la
+
+# Create a test file to verify quota
+dd if=/dev/zero of=testfile bs=1M count=100
+
+# Check quota usage
+xfs_quota -x -c "report -h" /
+```
+
+Exit back to the rocky-vm user:
+
+```bash
+exit
+```
+
+### Take a Final Snapshot
+
+Create a snapshot named "Provisioning Scripts Tested" after successful verification. This serves as a clean baseline if you need to troubleshoot later.
+
+---
+
+## Step 5: Deprovision Test User
+
+Once you've verified the provisioning script works, you can test the deprovisioning process to ensure user removal is working correctly.
+
+### Deprovision Without Backup
+
+Remove the test user without creating a backup:
+
+```bash
+sudo ./deprovision_user.sh testuser01
+```
+
+You will be prompted to confirm the deletion. Type `yes` to proceed.
+
+### Deprovision With Backup
+
+For a safer approach, create a backup before deletion:
+
+```bash
+sudo ./deprovision_user.sh testuser01 --backup
+```
+
+This creates a backup archive that can be restored later if needed.
+
+For detailed information about the deprovisioning script, its options, backup management, and complete output examples, see [deprovision_user.md](./deprovision_user.md).
+
+### Verify User Removal
+
+Confirm the user was successfully removed:
+
+```bash
+# User should not exist
+id testuser01
+
+# Home directory should be gone
+ls /home/storage_users/testuser01
+```
+
+Both commands should return "not found" or similar errors, confirming successful removal.

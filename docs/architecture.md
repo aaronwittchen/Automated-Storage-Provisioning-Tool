@@ -107,13 +107,13 @@ graph TD
 
 ```mermaid
 graph TD
-    Start["Admin initiates<br/>provision_user.sh alice -q 10G"] --> Val["Validation Phase<br/>Check username format<br/>Check quota format<br/>Verify user doesn't exist"]
+    Start["Admin initiates<br/>provision_user.sh sysadmin -q 10G"] --> Val["Validation Phase<br/>Check username format<br/>Check quota format<br/>Verify user doesn't exist"]
     
     Val --> ValOK{Validation<br/>Pass?}
     ValOK -->|No| VErr["Validation Error<br/>Log and exit"]
-    ValOK -->|Yes| Create["User Creation Phase<br/>useradd alice<br/>Generate temp password<br/>groupadd storage_users"]
+    ValOK -->|Yes| Create["User Creation Phase<br/>useradd sysadmin<br/>Generate temp password<br/>groupadd storage_users"]
     
-    Create --> Dir["Directory Setup Phase<br/>mkdir /home/storage_users/alice<br/>chown alice:storage_users<br/>chmod 700<br/>Create subdirs: data, backups,<br/>temp, logs"]
+    Create --> Dir["Directory Setup Phase<br/>mkdir /home/storage_users/sysadmin<br/>chown sysadmin:storage_users<br/>chmod 700<br/>Create subdirs: data, backups,<br/>temp, logs"]
     
     Dir --> Quota["Quota Enforcement Phase<br/>xfs_quota set 10G hard limit<br/>xfs_quota set 8G soft limit<br/>Verify quota applied"]
     
@@ -141,19 +141,19 @@ graph TD
 
 ```mermaid
 graph TD
-    Start["Admin initiates<br/>deprovision_user.sh alice --backup"] --> Safe["Safety Phase<br/>Verify user alice exists<br/>Display warning with user info<br/>Check for running processes"]
+    Start["Admin initiates<br/>deprovision_user.sh sysadmin --backup"] --> Safe["Safety Phase<br/>Verify user sysadmin exists<br/>Display warning with user info<br/>Check for running processes"]
     
     Safe --> Confirm{Admin<br/>Confirms?}
     Confirm -->|No| Abort["Deprovisioning Aborted<br/>No changes made"]
     
-    Confirm -->|Yes| Backup["Backup Phase<br/>Gather user data from<br/>/home/storage_users/alice<br/>tar -czf alice_TIMESTAMP.tar.gz<br/>Create .meta file with metadata<br/>Store in /var/backups/deprovisioned_users/"]
+    Confirm -->|Yes| Backup["Backup Phase<br/>Gather user data from<br/>/home/storage_users/sysadmin<br/>tar -czf sysadmin_TIMESTAMP.tar.gz<br/>Create .meta file with metadata<br/>Store in /var/backups/deprovisioned_users/"]
     
     Backup --> BackupOK{Backup<br/>Success?}
     BackupOK -->|No| BackupErr["Backup Failed<br/>Abort and alert admin"]
     
-    BackupOK -->|Yes| Lock["Account Termination Phase<br/>passwd -l alice - lock account<br/>pkill -u alice - kill processes<br/>usermod -s /sbin/nologin alice<br/>Remove xfs_quota limits"]
+    BackupOK -->|Yes| Lock["Account Termination Phase<br/>passwd -l sysadmin - lock account<br/>pkill -u sysadmin - kill processes<br/>usermod -s /sbin/nologin sysadmin<br/>Remove xfs_quota limits"]
     
-    Lock --> Cleanup["Cleanup Phase<br/>userdel -r alice - delete user<br/>Remove home directory tree<br/>Remove SSH authorized_keys<br/>Remove audit rules for user"]
+    Lock --> Cleanup["Cleanup Phase<br/>userdel -r sysadmin - delete user<br/>Remove home directory tree<br/>Remove SSH authorized_keys<br/>Remove audit rules for user"]
     
     Cleanup --> Logging["Logging & Reporting<br/>Log all deprovisioning steps<br/>Record backup file location<br/>Note completion timestamp"]
     
@@ -269,7 +269,7 @@ SSH access attempt            → /var/log/auth.log
 ### Workflow 1: Single User Provisioning
 ```mermaid
 graph LR
-    A["Admin: provision_user.sh alice"] --> B["Validate Input"]
+    A["Admin: provision_user.sh sysadmin"] --> B["Validate Input"]
     B --> C["Create User"]
     C --> D["Create Directory"]
     D --> E["Apply Quota"]
@@ -290,9 +290,9 @@ graph LR
 ### Workflow 2: Batch Provisioning
 ```mermaid
 graph TD
-    A["Create users.txt<br/>alice<br/>bob<br/>charlie"] --> B["Iterate: for each user in file"]
+    A["Create users.txt<br/>sysadmin<br/>bob<br/>charlie"] --> B["Iterate: for each user in file"]
     B --> C["provision_user.sh"]
-    C --> D1["alice: 5GB quota"]
+    C --> D1["sysadmin: 5GB quota"]
     C --> D2["bob: 5GB quota"]
     C --> D3["charlie: 5GB quota"]
     
@@ -307,7 +307,7 @@ graph TD
 ### Workflow 3: Safe Deprovisioning
 ```mermaid
 graph TD
-    A["deprovision_user.sh alice"] --> B["Display warning & verify"]
+    A["deprovision_user.sh sysadmin"] --> B["Display warning & verify"]
     B --> C{Confirm?}
     C -->|No| D["Abort - No changes"]
     C -->|Yes| E["Create Backup"]

@@ -142,12 +142,12 @@ sudo puppet apply /etc/puppetlabs/code/environments/production/manifests/init.pp
 ### Provision a Single User
 
 ```bash
-sudo ./scripts/provision_user.sh alice
+sudo ./scripts/provision_user.sh sysadmin
 ```
 
 Creates:
-- System user `alice`
-- Directory `/storage/alice` with 700 permissions
+- System user `sysadmin`
+- Directory `/storage/sysadmin` with 700 permissions
 - 2GB soft limit / 2.5GB hard limit quota
 - Membership in `storageusers` group
 
@@ -157,10 +157,10 @@ sequenceDiagram
     participant Script as provision_user.sh
     participant System as Linux System
    
-    Admin->>Script: ./provision_user.sh alice
+    Admin->>Script: ./provision_user.sh sysadmin
     Script->>Script: Validate input
-    Script->>System: useradd alice
-    Script->>System: Create /storage/alice
+    Script->>System: useradd sysadmin
+    Script->>System: Create /storage/sysadmin
     Script->>System: Set quota 2GB
     Script->>System: Configure access
     Script->>Admin: Success + Temp Password
@@ -170,7 +170,7 @@ sequenceDiagram
 Create a file `users.txt`:
 
 ```text
-alice
+sysadmin
 bob
 charlie
 ```
@@ -186,21 +186,21 @@ done < users.txt
 ### Set Custom Quota
 
 ```bash
-sudo ./scripts/set_quota.sh alice 5000000 6000000
-# Sets alice's quota to 5GB soft / 6GB hard
+sudo ./scripts/set_quota.sh sysadmin 5000000 6000000
+# Sets sysadmin's quota to 5GB soft / 6GB hard
 ```
 
 ### Check User Storage Usage
 
 ```bash
-sudo quota -u alice
+sudo quota -u sysadmin
 sudo repquota -a # Show all users
 ```
 
 ### Deprovision a User
 
 ```bash
-sudo ./scripts/deprovision_user.sh alice
+sudo ./scripts/deprovision_user.sh sysadmin
 ```
 
 Removes:
@@ -211,7 +211,7 @@ Removes:
 
 ```mermaid
 graph LR
-    A["deprovision_user.sh alice"] --> B["Warning"]
+    A["deprovision_user.sh sysadmin"] --> B["Warning"]
     B --> C{Confirm?}
     C -->|No| D["Abort"]
     C -->|Yes| E["Create Backup"]
@@ -453,7 +453,7 @@ graph TD
 
 ```bash
 # Single user
-sudo quota -u alice
+sudo quota -u sysadmin
 # All users
 sudo repquota -a
 # Directory size

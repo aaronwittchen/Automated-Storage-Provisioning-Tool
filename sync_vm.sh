@@ -14,6 +14,8 @@
 #   - SSH key-based authentication configured
 #
 
+set -euo pipefail
+
 # === Default Configuration ===
 DEFAULT_LOCAL_DIR="$(pwd)"
 DEFAULT_REMOTE_TARGET="rocky-vm@192.168.68.105:/home/rocky-vm/storage-provisioning/"
@@ -72,6 +74,16 @@ EOF
   exit 0
 }
 
+validate_remote_target() {
+  local target="$1"
+  # Remote target must match: user@host:/path format
+  if ! [[ "$target" =~ ^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+:[a-zA-Z0-9/_.-]+$ ]]; then
+    echo -e "${RED}Invalid remote target format: $target${NC}"
+    echo -e "${YELLOW}Expected format: user@host:/path${NC}"
+    exit 1
+  fi
+}
+
 print_header() {
   echo -e "${BLUE}-------------------------------------------${NC}"
   echo -e "${BLUE} Automated Storage Provisioning Tool Sync${NC}"
@@ -121,10 +133,13 @@ fi
 LOCAL_DIR="${LOCAL_DIR:-$DEFAULT_LOCAL_DIR}"
 REMOTE_TARGET="${REMOTE_TARGET:-$DEFAULT_REMOTE_TARGET}"
 
+# === Validate paths ===
 if [[ ! -d "$LOCAL_DIR" ]]; then
   echo -e "${RED}Local directory not found: $LOCAL_DIR${NC}"
   exit 1
 fi
+
+validate_remote_target "$REMOTE_TARGET"
 
 # === Prepare exclude arguments ===
 EXCLUDE_ARGS=()
@@ -143,20 +158,29 @@ if [[ "$CONFIRM" != "y" ]]; then
 fi
 
 # === Perform Sync ===
+# Note: Trailing slashes are significant in rsync:
+#   - LOCAL_DIR/ syncs the contents of LOCAL_DIR (without the LOCAL_DIR folder itself)
+#   - REMOTE_TARGET receives files directly to the path
+# This prevents creating nested directories like storage-provisioning/storage-provisioning/
 if [[ "$MODE" == "push" ]]; then
   echo -e "${YELLOW}Pushing local → remote...${NC}"
-  rsync -avz --delete "${EXCLUDE_ARGS[@]}" "$LOCAL_DIR/" "$REMOTE_TARGET" | tee -a "$LOG_FILE"
+  if rsync -avz --delete "${EXCLUDE_ARGS[@]}" "$LOCAL_DIR/" "$REMOTE_TARGET" | tee -a "$LOG_FILE"; then
+    echo -e "${GREEN}Sync completed successfully.${NC}"
+    log_msg "Sync ($MODE) completed successfully."
+  else
+    echo -e "${RED}Sync encountered errors.${NC}"
+    log_msg "Sync ($MODE) encountered errors."
+    exit 1
+  fi
 
 elif [[ "$MODE" == "pull" ]]; then
   echo -e "${YELLOW}Pulling remote → local...${NC}"
-  rsync -avz --delete "${EXCLUDE_ARGS[@]}" "$REMOTE_TARGET" "$LOCAL_DIR/" | tee -a "$LOG_FILE"
-fi
-
-# === Final status ===
-if [[ $? -eq 0 ]]; then
-  echo -e "${GREEN}Sync completed successfully.${NC}"
-  log_msg "Sync ($MODE) completed successfully."
-else
-  echo -e "${RED}Sync encountered errors.${NC}"
-  log_msg "Sync ($MODE) encountered errors."
+  if rsync -avz --delete "${EXCLUDE_ARGS[@]}" "$REMOTE_TARGET" "$LOCAL_DIR/" | tee -a "$LOG_FILE"; then
+    echo -e "${GREEN}Sync completed successfully.${NC}"
+    log_msg "Sync ($MODE) completed successfully."
+  else
+    echo -e "${RED}Sync encountered errors.${NC}"
+    log_msg "Sync ($MODE) encountered errors."
+    exit 1
+  fi
 fi

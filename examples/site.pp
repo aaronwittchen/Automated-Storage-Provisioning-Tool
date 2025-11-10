@@ -46,7 +46,7 @@ storage_provisioning::user { 'service_account':
 # In hiera.yaml or common.yaml:
 # ---
 # storage_provisioning::users:
-#   alice:
+#   sysadmin:
 #     quota: '20G'
 #   bob:
 #     quota: '30G'
