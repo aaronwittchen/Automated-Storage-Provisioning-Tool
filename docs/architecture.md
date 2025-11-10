@@ -8,8 +8,6 @@ The Automated Storage Provisioning Tool is a containerized, enterprise-grade sys
 **Automation Framework:** Puppet + Bash scripts  
 **Use Case:** Multi-user environments requiring consistent, auditable storage management
 
----
-
 ## System Architecture Diagram
 
 ```mermaid
@@ -58,10 +56,6 @@ graph TB
     
     VM --> Result["Provisioned Users<br/>Quotas Applied<br/>Access Configured"]
 ```
-
----
-
-## Component Hierarchy
 
 ## Component Hierarchy
 
@@ -116,15 +110,17 @@ graph TB
     File_Tools --> L4
     Audit_Tools --> L4
     
-    style L1 fill:#e3f2fd
-    style L2 fill:#f3e5f5
-    style L3 fill:#fff3e0
-    style L4 fill:#e8f5e9
+    style L1 stroke:#1e88e5,stroke-width:2px,fill:none,color:#1e88e5
+    style L2 stroke:#8e24aa,stroke-width:2px,fill:none,color:#8e24aa
+    style L3 stroke:#fb8c00,stroke-width:2px,fill:none,color:#fb8c00
+    style L4 stroke:#43a047,stroke-width:2px,fill:none,color:#43a047
 ```
 
-**User Provisioning Sequence Chart**
+## Data Flow Diagrams
 
-**User Deprovisioning Sequence Chart**
+### User Provisioning Sequence Chart
+
+### User Deprovisioning Sequence Chart
 
 ---
 
@@ -140,21 +136,21 @@ sequenceDiagram
 
     Admin->>Script: ./provision_user.sh alice -q 10G
     
-    rect rgb(200, 220, 255)
+    rect rgb(255,255,255,0.1),stroke:#1e88e5,stroke-width:2px
     Note over Script: Validation Phase
     Script->>Script: Validate username format
     Script->>Script: Validate quota format
     Script->>System: Check if user exists
     end
     
-    rect rgb(200, 255, 200)
+    rect rgb(255,255,255,0.1),stroke:#43a047,stroke-width:2px
     Note over Script: User Creation Phase
     Script->>System: useradd alice
     Script->>System: groupadd storage_users
     Script->>System: Generate temp password
     end
     
-    rect rgb(255, 240, 200)
+    rect rgb(255,255,255,0.1),stroke:#ffc107,stroke-width:2px
     Note over Script: Directory Setup Phase
     Script->>FS: mkdir /home/storage_users/alice
     Script->>FS: chown alice:storage_users
@@ -162,13 +158,13 @@ sequenceDiagram
     Script->>FS: Create subdirs (data,backups,temp,logs)
     end
     
-    rect rgb(255, 220, 220)
+    rect rgb(255,255,255,0.1),stroke:#f44336,stroke-width:2px
     Note over Script: Quota Enforcement Phase
     Script->>System: xfs_quota set 10G limit
     Script->>System: xfs_quota verify
     end
     
-    rect rgb(220, 200, 255)
+    rect rgb(255,255,255,0.1),stroke:#9c27b0,stroke-width:2px
     Note over Script: Access Control Phase
     Script->>System: SSH access: DENY
     Script->>System: Add SELinux context
@@ -176,7 +172,7 @@ sequenceDiagram
     end
     
     Script->>Log: [INFO] User provisioned successfully
-    Script->>Admin: ✅ Success + Temp Password
+    Script->>Admin: Success + Temp Password
 ```
 
 ---
@@ -188,22 +184,21 @@ sequenceDiagram
     actor Admin
     participant Script as deprovision_user.sh
     participant System as Linux System
-    participant FS as XFS Filesystem
     participant Backup as Backup Storage
     participant Log as Logs
 
     Admin->>Script: ./deprovision_user.sh alice --backup
     
-    rect rgb(255, 200, 200)
+    rect rgb(255,255,255,0.1),stroke:#f44336,stroke-width:2px
     Note over Script: Safety Phase
     Script->>System: Verify user exists
-    Script->>Admin: ⚠️ Display warning
+    Script->>Admin: Display warning
     Script->>Admin: Require 'yes' confirmation
     Admin->>Script: yes
     Script->>System: Gather user info (UID, disk usage)
     end
     
-    rect rgb(255, 240, 200)
+    rect rgb(255,255,255,0.1),stroke:#ff9800,stroke-width:2px
     Note over Script: Backup Phase
     Script->>FS: Read /home/storage_users/alice
     Script->>Backup: tar -czf alice_TIMESTAMP.tar.gz
@@ -211,7 +206,7 @@ sequenceDiagram
     Script->>Log: [INFO] Backup created
     end
     
-    rect rgb(200, 200, 255)
+    rect rgb(255,255,255,0.1),stroke:#3f51b5,stroke-width:2px
     Note over Script: Account Termination Phase
     Script->>System: passwd -l alice (lock account)
     Script->>System: pkill -u alice (kill processes)
@@ -219,7 +214,7 @@ sequenceDiagram
     Script->>System: xfs_quota remove limits
     end
     
-    rect rgb(255, 220, 220)
+    rect rgb(255,255,255,0.1),stroke:#e91e63,stroke-width:2px
     Note over Script: Cleanup Phase
     Script->>System: userdel -r alice
     Script->>FS: rm -rf /home/storage_users/alice
@@ -228,7 +223,7 @@ sequenceDiagram
     end
     
     Script->>Log: [INFO] User deprovisioned
-    Script->>Admin: ✅ Deprovisioning complete<br/>Backup: /var/backups/.../alice_TIMESTAMP.tar.gz<br/>Restore command provided
+    Script->>Admin: Deprovisioning complete<br/>Backup: /var/backups/.../alice_TIMESTAMP.tar.gz<br/>Restore command provided
 ```
 
 ---
@@ -442,15 +437,15 @@ Output:
 
 ### Future Enhancements
 
-| Enhancement | Benefit | Effort |
-|-------------|---------|--------|
-| **Multi-VM deployment** | Scale across cluster | Medium |
-| **REST API** | Programmatic access | Medium |
-| **Grafana dashboards** | Real-time monitoring | Low |
-| **Prometheus metrics** | Time-series analytics | Medium |
-| **LDAP integration** | Centralized identity | High |
-| **Containerization** | Portable deployment | Medium |
-| **Ansible wrapper** | Multi-OS support | High |
+| Enhancement | Benefit |
+|-------------|---------|
+| **Multi-VM deployment** | Scale across cluster |
+| **REST API** | Programmatic access |
+| **Grafana dashboards** | Real-time monitoring |
+| **Prometheus metrics** | Time-series analytics |
+| **LDAP integration** | Centralized identity |
+| **Containerization** | Portable deployment |
+| **Ansible wrapper** | Multi-OS support |
 
 ---
 
@@ -523,72 +518,3 @@ If provisioning fails:
      - Investigate root cause
      - Retry with fixes
 ```
-
----
-
-## File Organization Reference
-
-```
-automated-storage-provisioning/
-│
-├── README.md                          # Quick start guide
-├── .gitignore                         # Git exclusions
-│
-├── docs/
-│   ├── architecture.md                # This file
-│   ├── usage.md                       # User manual
-│   └── testing.md                     # Test procedures
-│
-├── scripts/
-│   ├── provision_user.sh              # Provision entrypoint
-│   ├── deprovision_user.sh            # Deprovision entrypoint
-│   ├── set_quota.sh                   # Quota management
-│   ├── utils.sh                       # Shared functions
-│   └── health_check.sh                # System health
-│
-├── manifests/
-│   ├── init.pp                        # Main orchestrator
-│   ├── user.pp                        # User provisioning module
-│   └── decommission.pp                # User removal module
-│
-├── templates/
-│   └── README.txt.epp                 # User README template
-│
-├── examples/
-│   └── site.pp                        # Example manifest
-│
-├── tests/
-│   ├── test_provisioning.sh           # Integration tests
-│   ├── test_quota.sh                  # Quota tests
-│   └── fixtures/                      # Test data
-│
-└── logs/
-    └── (auto-generated by VM)
-```
-
----
-
-## Change Log & Version Control
-
-All changes tracked via Git commits with descriptive messages:
-
-```
-feat: Add user provisioning with quota support
-fix: Correct XFS quota syntax for hard limits
-docs: Update architecture with backup workflow
-refactor: Extract validation logic to utils.sh
-test: Add quota enforcement test cases
-```
-
-Commit early, commit often—use Git as your audit trail!
-
----
-
-## Support & Troubleshooting
-
-For issues, refer to:
-
-1. **Logs:** `/var/log/storage-provisioning/provisioning.log`
-2. **README:** Main project README with quick start
-3. **This file:** Architecture details and design decisions
-4. **GitHub Issues:** Community support and known issues
