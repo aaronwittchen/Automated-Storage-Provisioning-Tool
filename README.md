@@ -480,7 +480,7 @@ Contributions welcome! Please:
 
 ## License
 
-[Add your license here — MIT, GPL, etc.]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
@@ -491,7 +491,7 @@ For issues, questions, or feature requests:
 
 ## Authors
 
-- Your Name — Initial development
+- Aaron
 
 ## Changelog
 

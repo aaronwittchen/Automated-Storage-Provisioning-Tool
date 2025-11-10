@@ -1,4 +1,8 @@
 # Project specific files to exclude
+donesteps.md
+stepdocs.md
+steps.md
+todo.md
 
 # Logs
 logs/
