@@ -1,101 +1,285 @@
 <%- | String $username,
       String $quota,
+      String $home_dir,
       Array[String] $subdirs,
+      String $created_date,
+      String $expiration_date,
 | -%>
-================================================================================
-                    STORAGE USER ACCOUNT INFORMATION
-================================================================================
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    WELCOME TO YOUR STORAGE ACCOUNT                         ║
+╚════════════════════════════════════════════════════════════════════════════╝
 
-Username: <%= $username %>
-Disk Quota: <%= $quota %>
-Created: <%= strftime('%Y-%m-%d %H:%M:%S') %>
+ACCOUNT INFORMATION
+──────────────────────────────────────────────────────────────────────────────
+  Username:          <%= $username %>
+  Home Directory:    <%= $home_dir %>
+  Disk Quota:        <%= $quota %>
+  Account Created:   <%= $created_date %>
+  Account Expires:   <%= $expiration_date %>
 
---------------------------------------------------------------------------------
+QUICK STATS
+──────────────────────────────────────────────────────────────────────────────
+  View your quota usage:
+    $ quota -s
+
+  View a specific file's size:
+    $ du -sh ~/data/
+
+  List all your directories:
+    $ tree ~/ -L 1
+
+
 DIRECTORY STRUCTURE
---------------------------------------------------------------------------------
+──────────────────────────────────────────────────────────────────────────────
 
-Your home directory contains the following subdirectories:
+Your account includes the following directories:
 
 <% $subdirs.each |$subdir| { -%>
-  - <%= $subdir %>/
+  <%= $subdir %>/
 <% } -%>
 
-Recommended usage:
-  - data/      : Store your primary files and documents here
-  - backups/   : Keep backup copies of important files
-  - temp/      : Temporary files (may be cleaned automatically)
-  - logs/      : Application or script logs
+DIRECTORY PURPOSES:
 
---------------------------------------------------------------------------------
-QUOTA INFORMATION
---------------------------------------------------------------------------------
+  data/       - Your primary storage (documents, files, projects)
+  backups/    - Keep copies of important files here
+  temp/       - Temporary files (cleaned weekly, don't store important data!)
+  logs/       - Application logs and error messages
 
-Your account has a disk quota of <%= $quota %>.
 
-To check your current disk usage:
+STORAGE QUOTA EXPLAINED
+──────────────────────────────────────────────────────────────────────────────
+
+Your account has a total disk quota of <%= $quota %>.
+
+What this means:
+  OK - You can store up to <%= $quota %> of data
+  ERROR - Once full, you cannot write new files
+  WARNING - Applications may fail to save data when quota is exceeded
+
+Check your usage anytime:
   $ quota -s
 
-If you exceed your quota:
-  - You will not be able to write new files
-  - Some applications may fail to save data
-  - Contact your administrator to request a quota increase
+Example output:
+  Disk quotas for user <%= $username %>:
+  Filesystem       blocks   quota   limit   grace   files   quota   limit
+  /dev/sda1         2048M   5120M   5120M           1200           2000
 
---------------------------------------------------------------------------------
-IMPORTANT SECURITY NOTES
---------------------------------------------------------------------------------
+If you approach your limit:
+  1. Identify large files:       $ du -sh ~/* | sort -h
+  2. Delete unnecessary files:   $ rm -rf ~/temp/*
+  3. Archive old data:           $ tar -czf archive.tar.gz old_folder/
+  4. Request increase:           Contact your administrator
 
-1. Your home directory is private (mode 0700)
-   - Only you can access your files
-   - Even other users in your group cannot read your data
 
-2. First Login Password Change:
-   - You will be required to change your temporary password
-   - Choose a strong password (at least 12 characters)
+SECURITY & PRIVACY
+──────────────────────────────────────────────────────────────────────────────
 
-3. SSH Access:
-   - SSH access may be restricted for storage users
-   - Use SFTP, SCP, or file sharing protocols to access your files
+YOUR ACCOUNT IS PRIVATE AND SECURE:
 
-4. File Permissions:
-   - Be careful when changing file permissions
-   - Do not make files world-readable if they contain sensitive data
+  ✓ Your home directory (~/):
+    - Only YOU can access
+    - Permission: 700 (drwx------)
+    - Even group members cannot see your files
 
---------------------------------------------------------------------------------
-GETTING STARTED
---------------------------------------------------------------------------------
+  ✓ File ownership:
+    - All files in your directory are owned by you
+    - You control access to all your files
 
-To access your storage:
+  WARNING: Do NOT change permissions to world-readable
+    - Example: chmod 777 ~/data/
+    - This exposes your files to all users on the system
 
-Via SFTP (Recommended):
-  $ sftp <%= $username %>@<server-address>
-  > cd data
-  > put myfile.txt
-  > get remotefile.txt
+FIRST LOGIN - PASSWORD CHANGE REQUIRED
+──────────────────────────────────────────────────────────────────────────────
 
-Via SCP:
-  # Upload
-  $ scp localfile.txt <%= $username %>@<server-address>:~/data/
+When you first log in, you MUST change your password:
 
-  # Download
-  $ scp <%= $username %>@<server-address>:~/data/remotefile.txt ./
+  $ passwd
+  Current password: (enter temporary password)
+  New password: (choose a strong password - min 12 characters)
+  Retype password: (confirm)
 
-Via SSH (if enabled):
-  $ ssh <%= $username %>@<server-address>
+PASSWORD RECOMMENDATIONS:
+  OK - Use uppercase, lowercase, numbers, and symbols
+  OK - Avoid dictionary words or personal information
+  OK - Example: C0mplex!Pass@2025#Secure
 
---------------------------------------------------------------------------------
-SUPPORT
---------------------------------------------------------------------------------
 
-If you need assistance:
-  - Contact your system administrator
-  - Check logs in ~/logs/ for application errors
-  - Review quota usage if experiencing write failures
+HOW TO ACCESS YOUR STORAGE
+──────────────────────────────────────────────────────────────────────────────
 
-For quota increases or other changes:
-  - Submit a request to your administrator
-  - Include justification for additional storage
+METHOD 1: SFTP (RECOMMENDED - Secure, GUI-friendly)
+────────────────────────────────────────────────────
 
-================================================================================
-Last Updated: <%= strftime('%Y-%m-%d') %>
-Managed by Puppet
-================================================================================
+  Command line:
+    $ sftp <%= $username %>@storage.example.com
+    > cd data
+    > ls
+    > put local_file.txt
+    > get remote_file.txt
+    > quit
+
+  GUI SFTP Clients (Windows/Mac/Linux):
+    • FileZilla (free, popular)
+    • WinSCP (Windows)
+    • Cyberduck (Mac/Windows)
+
+  Configure in FileZilla:
+    Protocol: SFTP
+    Host: storage.example.com
+    Username: <%= $username %>
+    Password: (your password)
+
+
+METHOD 2: SCP (Command Line)
+────────────────────────────
+
+  Upload a file:
+    $ scp myfile.txt <%= $username %>@storage.example.com:~/data/
+
+  Upload entire directory:
+    $ scp -r my_folder <%= $username %>@storage.example.com:~/data/
+
+  Download a file:
+    $ scp <%= $username %>@storage.example.com:~/data/remotefile.txt ./
+
+  Download entire directory:
+    $ scp -r <%= $username %>@storage.example.com:~/data/ ./
+
+
+METHOD 3: SSH (Command Line - if enabled)
+──────────────────────────────────────────
+
+  Log in:
+    $ ssh <%= $username %>@storage.example.com
+
+  Note: SSH access may be restricted for storage users
+        Contact admin if you need SSH access
+
+
+COMMON TASKS
+──────────────────────────────────────────────────────────────────────────────
+
+CHECK YOUR QUOTA:
+  $ quota -s                          # Human-readable format
+  $ quota <%= $username %>            # Detailed report
+
+FIND LARGE FILES:
+  $ du -sh ~/* | sort -h              # Show all dirs by size
+  $ find ~/ -type f -size +100M       # Find files larger than 100MB
+
+CREATE A BACKUP:
+  $ tar -czf backup.tar.gz ~/data/    # Compress folder
+  $ gzip myfile.txt                   # Compress single file
+
+CLEAN UP TEMP FILES:
+  $ rm -rf ~/temp/*                   # Empty temp directory
+  $ find ~/temp -mtime +30 -delete    # Delete files older than 30 days
+
+TRANSFER FILES (from another server):
+  $ scp user@other-server:/path/file ~/data/
+
+
+COMMON MISTAKES TO AVOID
+──────────────────────────────────────────────────────────────────────────────
+
+  ERROR - chmod 777 or chmod 666
+    → Exposes your files to all users
+
+  ERROR - Storing huge ISO files or databases
+    → Fills quota quickly
+
+  ERROR - Neglecting backups
+    → Deleted files are gone forever
+
+  ERROR - Using weak passwords
+    → Security risk to your account
+
+  ERROR - Uploading malware or executables
+    → May be detected and removed by admin
+
+
+TROUBLESHOOTING
+──────────────────────────────────────────────────────────────────────────────
+
+PROBLEM: "Disk quota exceeded"
+  → You've hit your storage limit
+  → Solution: Delete old files or contact admin for quota increase
+  → Check usage: $ quota -s
+
+PROBLEM: "Permission denied" when accessing files
+  → File permissions are too restrictive
+  → Solution: Check permissions: $ ls -la filename
+  → If you own it: $ chmod 644 filename (make readable)
+
+PROBLEM: "Connection refused" when using SFTP
+  → Server not responding or wrong hostname
+  → Solution: Verify hostname: $ ping storage.example.com
+  → Check if account is active: $ ssh admin@server
+
+PROBLEM: "Cannot write file" but quota shows space available
+  → Inode limit reached (too many small files)
+  → Solution: Combine files or delete empty files
+  → Check inodes: $ df -i
+
+
+SUPPORT & ADMINISTRATION
+──────────────────────────────────────────────────────────────────────────────
+
+Need Help?
+
+  Email:      storage-admin@example.com
+  Portal:     https://storage-admin.example.com
+  Ticket:     Submit request via IT ticketing system
+  Chat:       Slack channel #storage-support
+
+Common Requests:
+
+  QUOTA INCREASE:    "I need more storage space"
+     → Provide: Current usage, amount needed, business justification
+     → Typical response time: 1-2 business days
+
+  ACCOUNT RENEWAL:   "My account expires soon"
+     → Contact admin before expiration date
+     → Can extend up to 1 year
+
+  ACCOUNT MIGRATION: "I'm moving to a new server"
+     → Plan with admin to avoid downtime
+     → We can help transfer your data
+
+  DELETE MY DATA:    "I'm leaving / project complete"
+     → Data backed up before deletion
+     → Contact admin to schedule removal
+
+
+ACCOUNT POLICIES
+──────────────────────────────────────────────────────────────────────────────
+
+Allowed:
+  • Personal project files
+  • Research data
+  • Development environments
+  • Encrypted sensitive data
+
+NOT Allowed:
+  • Illegal content
+  • Pirated software or media
+  • Malware or hacking tools
+  • Spam or phishing content
+  • Violating company policy
+
+Warning - Violations may result in account suspension
+
+
+═════════════════════════════════════════════════════════════════════════════
+
+Account Template Version: 2.0
+Generated: <%= $created_date %>
+Managed by: Automated Storage Provisioning Tool
+Contact: storage-admin@example.com
+
+For detailed technical documentation, see:
+  docs/architecture.md
+  docs/usage.md
+
+═════════════════════════════════════════════════════════════════════════════
