@@ -9,6 +9,8 @@
 
 Automate user account creation, directory provisioning, disk quota management, and cleanup on Rocky Linux using Puppet and Bash scripts. Perfect for multi-user environments requiring consistent storage management.
 
+> **Work in Progress**
+
 ## Quick Start
 
 **Prerequisites:** Rocky Linux VM, 2+ CPU cores, 4GB RAM, Puppet, and sudo access
@@ -491,7 +493,7 @@ For issues, questions, or feature requests:
 
 ## Authors
 
-- Aaron
+- Your Name — Initial development
 
 ## Changelog
 
