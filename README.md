@@ -15,7 +15,7 @@ Automate user account creation, directory provisioning, disk quota management, a
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/aaronwittchen/Automated-Storage-Provisioning-Tool.git
 cd automated-storage-provisioning
 # Install dependencies
 sudo dnf install -y puppet quota xfsprogs openssh-server git
