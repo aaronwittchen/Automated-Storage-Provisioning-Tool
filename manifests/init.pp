@@ -8,6 +8,42 @@ class storage_provisioning (
   String $user_group   = 'storage_users',
 ) {
 
+  # Detect mount point dynamically based on storage_base path
+  $mount_point = $facts['mountpoints'] ? {
+    undef   => '/',
+    default => $facts['mountpoints'].reduce('/') |$result, $entry| {
+      $mount = $entry[0]
+      if $storage_base =~ /^${mount}/ and size($mount) > size($result) {
+        $mount
+      } else {
+        $result
+      }
+    },
+  }
+
+  # Detect filesystem type for quota operations
+  $fs_type = $facts['mountpoints'][$mount_point] ? {
+    undef   => 'xfs',
+    default => $facts['mountpoints'][$mount_point]['filesystem'] ? {
+      'xfs'   => 'xfs',
+      'ext4'  => 'ext4',
+      'ext3'  => 'ext3',
+      'btrfs' => 'btrfs',
+      'zfs'   => 'zfs',
+      default => 'xfs',
+    },
+  }
+
+  # Build filesystem-aware quota check command for cron job
+  $quota_check_cmd = $fs_type ? {
+    'xfs'   => "/usr/sbin/xfs_quota -x -c 'report -h' ${mount_point} | /bin/awk 'NR>2 && \$4 > \$3*0.9 {print \"WARNING: User \" \$1 \" is at \" \$4 \" of \" \$3 \" quota\"}'",
+    'ext4'  => "/usr/sbin/repquota -u ${mount_point} | /bin/awk 'NR>5 && \$3 > \$4*0.9 {print \"WARNING: User \" \$1 \" is at \" \$3 \"KB of \" \$4 \"KB quota\"}'",
+    'ext3'  => "/usr/sbin/repquota -u ${mount_point} | /bin/awk 'NR>5 && \$3 > \$4*0.9 {print \"WARNING: User \" \$1 \" is at \" \$3 \"KB of \" \$4 \"KB quota\"}'",
+    'btrfs' => "/bin/echo 'Btrfs quota check not implemented' # TODO: Add btrfs qgroup show parsing",
+    'zfs'   => "/sbin/zfs get -H -o name,value quota ${mount_point} | /bin/awk '\$2 != \"none\" {print \"ZFS quota: \" \$1 \" = \" \$2}'",
+    default => "/bin/echo 'Unknown filesystem type for quota checking'",
+  }
+
   # Ensure required packages are installed
   $required_packages = $facts['os']['family'] ? {
     'RedHat' => ['xfsprogs', 'quota', 'audit', 'policycoreutils-python-utils'],
@@ -143,9 +179,9 @@ class storage_provisioning (
     require => File[$log_dir],
   }
 
-  # Cron job to check quota usage and alert
+  # Cron job to check quota usage and alert (filesystem-aware)
   cron { 'check_storage_quotas':
-    command => "/usr/sbin/xfs_quota -x -c 'report -h' / | /bin/awk '\$4 > \$3*0.9 {print \"WARNING: User \" \$1 \" is at \" \$4 \" of \" \$3 \" quota\"}' >> ${log_dir}/quota-alerts.log",
+    command => "${quota_check_cmd} >> ${log_dir}/quota-alerts.log 2>&1",
     user    => 'root',
     hour    => '*/6',
     minute  => '0',

@@ -121,12 +121,38 @@ define storage_provisioning::user (
     require => File["${storage_base}/${username}"],
   }
 
-  # Detect filesystem type and mount point
-  $mount_point = '/'  # You might want to make this dynamic
-  $fs_type = $facts['filesystems'] ? {
-    /xfs/  => 'xfs',
-    /ext4/ => 'ext4',
-    default => 'xfs',
+  # Detect mount point dynamically based on storage_base path
+  # Uses mountpoints fact to find the correct mount for the storage directory
+  $mount_point = $facts['mountpoints'] ? {
+    undef   => '/',
+    default => $facts['mountpoints'].reduce('/') |$result, $entry| {
+      $mount = $entry[0]
+      # Find the longest matching mount point for our storage_base
+      if $storage_base =~ /^${mount}/ and size($mount) > size($result) {
+        $mount
+      } else {
+        $result
+      }
+    },
+  }
+
+  # Detect filesystem type from mountpoints fact or fall back to checking filesystems
+  $fs_type = $facts['mountpoints'][$mount_point] ? {
+    undef   => $facts['filesystems'] ? {
+      /xfs/   => 'xfs',
+      /ext4/  => 'ext4',
+      /ext3/  => 'ext3',
+      /btrfs/ => 'btrfs',
+      default => 'xfs',
+    },
+    default => $facts['mountpoints'][$mount_point]['filesystem'] ? {
+      'xfs'   => 'xfs',
+      'ext4'  => 'ext4',
+      'ext3'  => 'ext3',
+      'btrfs' => 'btrfs',
+      'zfs'   => 'zfs',
+      default => 'xfs',
+    },
   }
 
   # Set quota based on filesystem type

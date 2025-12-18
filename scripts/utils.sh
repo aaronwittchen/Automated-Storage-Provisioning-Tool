@@ -4,8 +4,17 @@
 
 set -euo pipefail
 
-# Configuration
-LOG_DIR="/var/log/storage-provisioning"
+# Get the directory where this script is located
+UTILS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source centralized configuration if available
+if [[ -f "$UTILS_SCRIPT_DIR/config.sh" ]]; then
+    # shellcheck source=./config.sh
+    source "$UTILS_SCRIPT_DIR/config.sh"
+fi
+
+# Configuration (with fallbacks if config.sh not loaded)
+LOG_DIR="${LOG_DIR:-/var/log/storage-provisioning}"
 LOG_FILE="$LOG_DIR/provisioning.log"
 STORAGE_BASE="${STORAGE_BASE:-/home/storage_users}"
 DEFAULT_GROUP="${DEFAULT_GROUP:-storage_users}"

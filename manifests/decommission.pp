@@ -9,6 +9,42 @@ define storage_provisioning::decommission (
   Integer $retention_days         = 30,
 ) {
 
+  # Detect mount point dynamically based on storage_base path
+  $mount_point = $facts['mountpoints'] ? {
+    undef   => '/',
+    default => $facts['mountpoints'].reduce('/') |$result, $entry| {
+      $mount = $entry[0]
+      if $storage_base =~ /^${mount}/ and size($mount) > size($result) {
+        $mount
+      } else {
+        $result
+      }
+    },
+  }
+
+  # Detect filesystem type
+  $fs_type = $facts['mountpoints'][$mount_point] ? {
+    undef   => 'xfs',
+    default => $facts['mountpoints'][$mount_point]['filesystem'] ? {
+      'xfs'   => 'xfs',
+      'ext4'  => 'ext4',
+      'ext3'  => 'ext3',
+      'btrfs' => 'btrfs',
+      'zfs'   => 'zfs',
+      default => 'xfs',
+    },
+  }
+
+  # Build filesystem-aware quota removal command
+  $quota_remove_cmd = $fs_type ? {
+    'xfs'   => "/usr/sbin/xfs_quota -x -c 'limit bsoft=0 bhard=0 ${username}' ${mount_point}",
+    'ext4'  => "/usr/sbin/setquota -u ${username} 0 0 0 0 ${mount_point}",
+    'ext3'  => "/usr/sbin/setquota -u ${username} 0 0 0 0 ${mount_point}",
+    'btrfs' => "/bin/true",  # Btrfs quotas are removed with subvolume
+    'zfs'   => "/bin/true",  # ZFS quotas are removed with dataset
+    default => "/bin/true",
+  }
+
   # Validate username exists
   if !defined(User[$username]) {
     notice("User ${username} does not exist in Puppet catalog")
@@ -89,9 +125,9 @@ define storage_provisioning::decommission (
     before  => User[$username],
   }
 
-  # Remove quota
+  # Remove quota (filesystem-aware)
   exec { "remove_quota_${username}":
-    command => "/usr/sbin/xfs_quota -x -c 'limit bsoft=0 bhard=0 ${username}' / || /bin/true",
+    command => "${quota_remove_cmd} || /bin/true",
     onlyif  => "/usr/bin/id ${username}",
     before  => User[$username],
   }
