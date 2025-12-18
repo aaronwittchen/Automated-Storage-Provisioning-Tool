@@ -50,6 +50,7 @@ That's it! A new user is created with a managed storage directory and 2GB quota.
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+- [File Transfer](#file-transfer)
 - [Architecture](#architecture)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
@@ -65,11 +66,13 @@ That's it! A new user is created with a managed storage directory and 2GB quota.
 ## Features
 
 - **Automated User Provisioning** — Create users with one command
-- **Disk Quotas** — Enforce soft/hard limits automatically
+- **Disk Quotas** — Enforce soft/hard limits automatically (XFS, EXT4, Btrfs, ZFS)
+- **File Transfer** — Upload, download, and sync files to user storage
 - **Access Control** — SSH/SFTP with chroot isolation (optional)
 - **Batch Operations** — Provision multiple users from a file
 - **Safe Deprovisioning** — Clean removal with backup options
 - **Puppet Integration** — Infrastructure-as-Code configuration management
+- **Centralized Config** — All settings in one place (`config.sh`)
 - **Monitoring** — Track usage and quota violations
 
 ## Prerequisites
@@ -186,8 +189,23 @@ done < users.txt
 ### Set Custom Quota
 
 ```bash
-sudo ./scripts/set_quota.sh sysadmin 5000000 6000000
-# Sets sysadmin's quota to 5GB soft / 6GB hard
+# Set quota with automatic hard limit (soft * 1.25)
+sudo ./scripts/set_quota.sh set sysadmin 5G
+
+# Set quota with custom soft and hard limits
+sudo ./scripts/set_quota.sh set sysadmin 5G --hard 6G
+
+# View user's quota
+sudo ./scripts/set_quota.sh show sysadmin
+
+# View all quotas
+sudo ./scripts/set_quota.sh report
+
+# Remove quota restrictions
+sudo ./scripts/set_quota.sh remove sysadmin
+
+# Check if quota is supported on filesystem
+sudo ./scripts/set_quota.sh check
 ```
 
 ### Check User Storage Usage
@@ -236,39 +254,135 @@ For per-user provisioning:
 sudo puppet apply -e "include storage_provisioning::users"
 ```
 
+## File Transfer
+
+Transfer files to and from user storage directories using the `transfer.sh` utility.
+
+### Upload Files
+
+```bash
+# Upload a file to user's data directory (default)
+sudo ./scripts/transfer.sh upload alice report.zip
+
+# Upload to a specific subdirectory
+sudo ./scripts/transfer.sh upload alice backup.tar.gz backups/
+
+# Remote upload (from your PC to server)
+./scripts/transfer.sh upload alice myfile.zip -r admin@192.168.1.100
+```
+
+### Download Files
+
+```bash
+# Download from user's storage
+sudo ./scripts/transfer.sh download alice data/report.zip ./
+
+# Download to specific local directory
+sudo ./scripts/transfer.sh download alice data/project.zip ~/downloads/
+
+# Remote download (from server to your PC)
+./scripts/transfer.sh download alice data/report.zip -r admin@192.168.1.100
+```
+
+### Sync Directories
+
+```bash
+# Sync local folder TO user's storage (upload)
+sudo ./scripts/transfer.sh sync-up alice ./project-files/ data/project/
+
+# Sync FROM user's storage to local (download)
+sudo ./scripts/transfer.sh sync-down alice data/project/ ./local-copy/
+
+# Remote sync with compression
+./scripts/transfer.sh sync-up alice ./docs/ -r admin@server --compress
+```
+
+### List & Usage
+
+```bash
+# List files in user's storage
+sudo ./scripts/transfer.sh list alice
+
+# List specific subdirectory
+sudo ./scripts/transfer.sh list alice data/
+
+# Show disk usage breakdown
+sudo ./scripts/transfer.sh usage alice
+```
+
+### File Transfer Workflow
+
+```mermaid
+graph LR
+    subgraph Local["Your PC"]
+        LF["Local Files"]
+    end
+
+    subgraph Server["Rocky Linux Server"]
+        TS["transfer.sh"]
+        subgraph Users["User Storage"]
+            UA["/home/storage_users/alice/"]
+            UB["/home/storage_users/bob/"]
+        end
+    end
+
+    LF -->|"upload / sync-up"| TS
+    TS -->|"route to user"| UA
+    TS -->|"route to user"| UB
+    UA -->|"download / sync-down"| LF
+
+    style TS fill:none,stroke:#1e88e5,stroke-width:2px
+    style Users fill:none,stroke:#43a047,stroke-width:2px
+```
+
+### Transfer Options
+
+| Option | Description |
+|--------|-------------|
+| `-r, --remote HOST` | Remote server (user@host) for remote transfers |
+| `-p, --port PORT` | SSH port (default: 22) |
+| `-k, --key KEYFILE` | SSH private key file |
+| `-n, --dry-run` | Show what would be transferred |
+| `-v, --verbose` | Verbose output |
+| `--compress` | Enable compression |
+| `--delete` | Delete extraneous files during sync |
+
 ## Architecture
 
 ### Directory Structure
 
 ```
 automated-storage-provisioning/
-├── README.md # This file
+├── README.md                    # This file
 ├── .gitignore
-├── sync.sh # Sync script for batch operations
+├── sync_vm.sh                   # Dev sync script (local to VM)
 │
 ├── docs/
-│   └── architecture.md # Detailed architecture documentation
+│   ├── architecture.md          # Detailed architecture documentation
+│   └── TESTING_GUIDE.md         # Hands-on testing guide
 │
 ├── scripts/
-│   ├── provision_user.sh # Create new user + storage
-│   ├── deprovision_user.sh # Remove user + cleanup
-│   ├── set_quota.sh # Manage disk quotas
-│   └── utils.sh # Shared utility functions
+│   ├── provision_user.sh        # Create new user + storage
+│   ├── deprovision_user.sh      # Remove user + cleanup
+│   ├── set_quota.sh             # Manage disk quotas
+│   ├── transfer.sh              # File transfer utility
+│   ├── config.sh                # Centralized configuration
+│   └── utils.sh                 # Shared utility functions
 │
 ├── manifests/
-│   ├── init.pp # Main Puppet manifest
-│   ├── user.pp # User creation module
-│   └── decommission.pp # User removal module
+│   ├── init.pp                  # Main Puppet manifest
+│   ├── user.pp                  # User creation module
+│   └── decommission.pp          # User removal module
 │
 ├── templates/
-│   └── README.txt.epp # Puppet template for user readme
+│   └── README.txt.epp           # Puppet template for user readme
 │
 ├── examples/
-│   └── site.pp # Example site configuration
+│   └── site.pp                  # Example site configuration
 │
-├── logs/ # Operation logs (auto-generated)
+├── logs/                        # Operation logs (auto-generated)
 │
-└── tests/ # Test scripts and fixtures
+└── tests/                       # Test scripts and fixtures
 ```
 
 ### Workflow
@@ -301,25 +415,27 @@ graph LR
         PS["provision_user.sh"]
         DS["deprovision_user.sh"]
         QS["set_quota.sh"]
+        TS["transfer.sh"]
         US["utils.sh"]
+        CS["config.sh"]
     end
-   
+
     subgraph Puppet_M["Puppet"]
         Init["init.pp"]
         User["user.pp"]
         Decom["decommission.pp"]
     end
-   
+
     subgraph System["System"]
         Quota["Quota Subsystem"]
         Access["SSH/SFTP Access"]
         Logs["Logs & Audit"]
     end
-   
+
     Scripts --> System
     Puppet_M --> System
     System --> Storage["Storage"]
-   
+
     style Scripts fill:none,stroke:#ff9800,stroke-width:2px
     style Puppet_M fill:none,stroke:#9c27b0,stroke-width:2px
     style System fill:none,stroke:#f44336,stroke-width:2px
@@ -328,19 +444,47 @@ graph LR
 
 ## Configuration
 
-### Customizable Parameters
-Edit `scripts/provision_user.sh` to adjust defaults:
+### Centralized Configuration
+
+All settings are managed in `scripts/config.sh`. You can override settings via:
+
+1. **Environment variables** (highest priority)
+2. **User config file**: `~/.storage-provisioning.conf`
+3. **System config file**: `/etc/storage-provisioning/config.conf`
 
 ```bash
-# Storage base directory
-STORAGE_DIR="/storage"
-# Default quotas (in 1K blocks)
-QUOTA_SOFT=2000000 # 2GB soft limit
-QUOTA_HARD=2500000 # 2.5GB hard limit
-# User group
-GROUP="storageusers"
-# Shell and home prefix
-SHELL="/bin/bash"
+# View current configuration
+source scripts/config.sh && print_config
+
+# Validate configuration
+source scripts/config.sh && validate_config
+```
+
+### Key Configuration Options
+
+Edit `scripts/config.sh` or create override files:
+
+```bash
+# Storage paths
+STORAGE_BASE="/home/storage_users"
+LOG_DIR="/var/log/storage-provisioning"
+BACKUP_DIR="/var/backups/deprovisioned_users"
+
+# User defaults
+DEFAULT_GROUP="storage_users"
+DEFAULT_QUOTA="10G"
+DEFAULT_QUOTA_HARD_MULTIPLIER="1.25"
+DEFAULT_SHELL="/bin/bash"
+DEFAULT_SUBDIRS="data,backups,temp,logs"
+
+# Feature flags
+ALLOW_SSH_DEFAULT="false"
+ENABLE_AUDIT="true"
+ENABLE_SELINUX="true"
+
+# Retention policies
+BACKUP_RETENTION_DAYS="30"
+LOG_RETENTION_DAYS="90"
 ```
 
 ### Shared Directories

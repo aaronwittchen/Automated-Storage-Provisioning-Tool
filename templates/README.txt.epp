@@ -157,6 +157,47 @@ METHOD 3: SSH (Command Line - if enabled)
         Contact admin if you need SSH access
 
 
+METHOD 4: ADMIN TRANSFER TOOL (transfer.sh)
+───────────────────────────────────────────
+
+  Your administrator can transfer files to/from your storage using the
+  transfer.sh utility. Contact them if you need assistance with bulk
+  transfers or have limited connectivity.
+
+  Admin commands (for reference):
+
+    Upload to your storage:
+      $ ./scripts/transfer.sh upload <%= $username %> myfile.zip
+
+    Download from your storage:
+      $ ./scripts/transfer.sh download <%= $username %> data/myfile.zip ./
+
+    Sync a folder to your storage:
+      $ ./scripts/transfer.sh sync-up <%= $username %> ./folder/ data/folder/
+
+    List your files:
+      $ ./scripts/transfer.sh list <%= $username %>
+
+    Check your disk usage:
+      $ ./scripts/transfer.sh usage <%= $username %>
+
+
+REMOTE TRANSFERS (from your PC)
+───────────────────────────────
+
+  If you have the transfer.sh script on your local computer, you can
+  transfer files directly to your storage:
+
+    Upload from your PC:
+      $ ./transfer.sh upload <%= $username %> ./myfile.zip -r admin@storage-server
+
+    Download to your PC:
+      $ ./transfer.sh download <%= $username %> data/report.pdf ./ -r admin@storage-server
+
+    Sync folder from your PC:
+      $ ./transfer.sh sync-up <%= $username %> ./project/ data/project/ -r admin@storage-server
+
+
 COMMON TASKS
 ──────────────────────────────────────────────────────────────────────────────
 
